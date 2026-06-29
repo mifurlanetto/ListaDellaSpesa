@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista della Spesa 🍊</title>
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <span class="logo-emoji">🍊</span>
+                <div class="logo-text">
+                    <h1>Lista della Spesa</h1>
+                    <p class="subtitle">Spesa condivisa e offline-first</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div id="connection-badge" class="badge online">
+                    <i class="fa-solid fa-wifi"></i>
+                    <span class="badge-text">Online</span>
+                </div>
+                <div id="sync-badge" class="badge synced">
+                    <i class="fa-solid fa-rotate"></i>
+                    <span class="badge-text">Sincronizzato</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Offline Banner -->
+        <div id="offline-banner" class="offline-banner hidden">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Sei offline. Le modifiche verranno salvate localmente e sincronizzate al ripristino della connessione.</span>
+        </div>
+
+        <!-- Tab Selector -->
+        <div class="tab-bar">
+            <button id="tab-shopping" class="tab-btn active">
+                <i class="fa-solid fa-basket-shopping"></i>
+                <span>Da Comprare</span>
+                <span id="shopping-tab-badge" class="tab-badge">0</span>
+            </button>
+            <button id="tab-catalog" class="tab-btn">
+                <i class="fa-solid fa-book-open"></i>
+                <span>Catalogo Articoli</span>
+                <span id="catalog-tab-badge" class="tab-badge">0</span>
+            </button>
+        </div>
+
+        <!-- Add Item Form -->
+        <section class="add-item-section card">
+            <form id="add-item-form">
+                <div class="form-row">
+                    <div class="input-group main-input">
+                        <label for="item-name">Nuovo articolo nel catalogo</label>
+                        <input type="text" id="item-name" placeholder="Es. Clementine, Latte, Pane..." required autocomplete="off">
+                    </div>
+                    <div class="input-group qty-input">
+                        <label for="item-qty">Quantità</label>
+                        <input type="text" id="item-qty" placeholder="Es. 1kg, 2 conf.">
+                    </div>
+                </div>
+                <div class="form-row flex-end">
+                    <div class="input-group category-select">
+                        <label for="item-category">Categoria</label>
+                        <select id="item-category">
+                            <!-- Populated dynamically via JS -->
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-primary">
+                        <i class="fa-solid fa-plus"></i> Aggiungi
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Actions Bar (Search, Supermarket Selector, Settings, Sync) -->
+        <div class="actions-bar">
+            <div class="search-bar">
+                <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                <input type="text" id="search-input" placeholder="Cerca articoli...">
+            </div>
+            
+            <div class="supermarket-selector-container">
+                <i class="fa-solid fa-shop supermarket-icon"></i>
+                <select id="active-supermarket-select" title="Seleziona Supermercato">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <button id="settings-button" class="btn-secondary" title="Impostazioni">
+                <i class="fa-solid fa-gear"></i>
+            </button>
+            <button id="sync-button" class="btn-secondary" title="Sincronizza ora">
+                <i class="fa-solid fa-arrows-rotate"></i>
+            </button>
+        </div>
+
+        <!-- Grocery List Grid -->
+        <main class="grocery-list-container">
+            <!-- Items grouped by category will be injected here -->
+            <div id="grocery-list-view" class="category-grid"></div>
+
+            <!-- Empty States -->
+            <div id="empty-shopping" class="empty-state hidden">
+                <div class="empty-icon">🛒</div>
+                <h3>Lista della spesa vuota</h3>
+                <p>Vai sul "Catalogo Articoli" per selezionare cosa comprare.</p>
+            </div>
+
+            <div id="empty-catalog" class="empty-state hidden">
+                <div class="empty-icon">📋</div>
+                <h3>Nessun articolo nel catalogo</h3>
+                <p>Usa il modulo in alto per aggiungere il primo articolo.</p>
+            </div>
+        </main>
+    </div>
+
+    <!-- Quick Edit Modal -->
+    <div id="edit-modal" class="modal hidden">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <h2>Modifica Articolo</h2>
+                <button id="close-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="edit-item-form">
+                <input type="hidden" id="edit-item-id">
+                <div class="input-group">
+                    <label for="edit-item-name">Nome</label>
+                    <input type="text" id="edit-item-name" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="edit-item-qty">Quantità predefinita</label>
+                    <input type="text" id="edit-item-qty">
+                </div>
+                <div class="input-group">
+                    <label for="edit-item-category">Categoria</label>
+                    <select id="edit-item-category">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+                <div class="modal-buttons">
+                    <button type="button" id="cancel-edit" class="btn-secondary">Annulla</button>
+                    <button type="submit" class="btn-primary">Salva</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Settings Dashboard Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content card settings-card" style="max-width: 550px;">
+            <div class="modal-header">
+                <h2>Impostazioni</h2>
+                <button id="close-settings-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="settings-tabs">
+                <button class="settings-tab-btn active" data-target="settings-supermarkets">Supermercati</button>
+                <button class="settings-tab-btn" data-target="settings-categories">Categorie</button>
+            </div>
+            
+            <!-- SUPERMARKETS PANE -->
+            <div id="settings-supermarkets" class="settings-pane active">
+                <div class="settings-add-form form-row">
+                    <input type="text" id="new-supermarket-name" placeholder="Nuovo Supermercato" style="flex: 1;">
+                    <button id="add-supermarket-btn" class="btn-primary">Aggiungi</button>
+                </div>
+                
+                <div id="supermarkets-list" class="settings-list"></div>
+                
+                <!-- Supermarket Reorder Section -->
+                <div id="supermarket-reorder-section" class="hidden reorder-section">
+                    <div class="reorder-header">
+                        <h3 id="reorder-supermarket-title">Ordina Corsie</h3>
+                        <button id="close-reorder-section" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 0.75rem;">Disponi le corsie nell'ordine in cui le incontri in questo supermercato.</p>
+                    <div id="reorder-list" class="reorder-list"></div>
+                    <div style="text-align: right; margin-top: 1rem;">
+                        <button id="save-reorder-btn" class="btn-primary">Salva Ordine Corsie</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CATEGORIES PANE -->
+            <div id="settings-categories" class="settings-pane hidden">
+                <div class="settings-add-form form-row">
+                    <input type="text" id="new-category-icon" placeholder="Emoji" style="width: 60px; text-align: center;">
+                    <input type="text" id="new-category-name" placeholder="Nuova Categoria" style="flex: 1;">
+                    <button id="add-category-btn" class="btn-primary">Aggiungi</button>
+                </div>
+                
+                <div id="categories-list" class="settings-list"></div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Custom Script -->
+    <script src="/static/app.js"></script>
+</body>
+</html>
