@@ -16,13 +16,15 @@ const ctx = canvas ? canvas.getContext('2d') : null;
 function resizeCanvas() {
     if(!canvas) return;
     const rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width;
-    canvas.height = rect.height;
-    if (document.getElementById('store-map-modal').classList.contains('hidden') === false) {
-        renderMap();
+    if (rect.width > 0 && rect.height > 0 && (canvas.width !== rect.width || canvas.height !== rect.height)) {
+        canvas.width = rect.width;
+        canvas.height = rect.height;
     }
 }
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', () => {
+    resizeCanvas();
+    renderMap();
+});
 
 window.openStoreMap = function(supId) {
     currentMapSupId = supId;
@@ -32,9 +34,9 @@ window.openStoreMap = function(supId) {
     // Initialize or load map data
     mapData = sup.graph ? JSON.parse(JSON.stringify(sup.graph)) : { nodes: {}, edges: [] };
     
-    // Ensure entrance and checkout exist
-    if (!mapData.nodes['entrance']) mapData.nodes['entrance'] = { x: 50, y: 50, floor: 0, type: 'entrance', label: 'Ingresso', icon: '🚪' };
-    if (!mapData.nodes['checkout']) mapData.nodes['checkout'] = { x: 250, y: 50, floor: 0, type: 'checkout', label: 'Casse', icon: '🛒' };
+    // Ensure entrance and checkout exist near the bottom
+    if (!mapData.nodes['entrance']) mapData.nodes['entrance'] = { x: 100, y: 450, floor: 0, type: 'entrance', label: 'Ingresso', icon: '🚪' };
+    if (!mapData.nodes['checkout']) mapData.nodes['checkout'] = { x: 300, y: 450, floor: 0, type: 'checkout', label: 'Casse', icon: '🛒' };
     
     currentFloor = 0;
     updateFloorDisplay();
@@ -42,11 +44,18 @@ window.openStoreMap = function(supId) {
     mapOffset = { x: 0, y: 0 };
     
     document.getElementById('store-map-modal').classList.remove('hidden');
-    // small delay to let DOM render before resizing canvas
+    
+    // Initialize size immediately
+    resizeCanvas();
+    updateUnplacedList();
+    renderMap();
+    
+    // Safety check in case modal animation takes a split second to finish layout
     setTimeout(() => {
         resizeCanvas();
         updateUnplacedList();
-    }, 10);
+        renderMap();
+    }, 50);
 };
 
 function setMapTool(tool) {
@@ -81,10 +90,13 @@ function updateUnplacedList() {
             btn.style.textAlign = 'left';
             btn.innerHTML = `<i class="fa-solid fa-plus"></i> ${cat.icon} ${cat.label}`;
             btn.onclick = () => {
-                // Place at center of current view
+                // Place at center of current view with fallback if size is 0
+                const spawnX = (canvas.width > 0 ? canvas.width / 2 : 400) - mapOffset.x;
+                const spawnY = (canvas.height > 0 ? canvas.height / 2 : 300) - mapOffset.y;
+                
                 mapData.nodes[catId] = {
-                    x: canvas.width/2 - mapOffset.x,
-                    y: canvas.height/2 - mapOffset.y,
+                    x: spawnX,
+                    y: spawnY,
                     floor: currentFloor,
                     type: 'category',
                     label: cat.label,
@@ -100,9 +112,12 @@ function updateUnplacedList() {
 
 document.getElementById('add-stairs-btn').addEventListener('click', () => {
     const id = 'stairs_' + Date.now();
+    const spawnX = (canvas.width > 0 ? canvas.width / 2 : 400) - mapOffset.x;
+    const spawnY = (canvas.height > 0 ? canvas.height / 2 : 300) - mapOffset.y;
+    
     mapData.nodes[id] = {
-        x: canvas.width/2 - mapOffset.x,
-        y: canvas.height/2 - mapOffset.y,
+        x: spawnX,
+        y: spawnY,
         floor: currentFloor,
         type: 'stairs',
         label: 'Scale/Ascensore',
@@ -241,6 +256,7 @@ if(canvas) {
 
 function renderMap() {
     if (!ctx) return;
+    resizeCanvas(); // Ensure logical size matches layout size before drawing
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Draw grid background
