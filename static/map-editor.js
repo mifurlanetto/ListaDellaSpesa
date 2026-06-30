@@ -110,6 +110,22 @@ function updateUnplacedList() {
     });
 }
 
+document.getElementById('add-corridor-btn').addEventListener('click', () => {
+    const id = 'corridor_' + Date.now();
+    const spawnX = (canvas.width > 0 ? canvas.width / 2 : 400) - mapOffset.x;
+    const spawnY = (canvas.height > 0 ? canvas.height / 2 : 300) - mapOffset.y;
+    
+    mapData.nodes[id] = {
+        x: spawnX,
+        y: spawnY,
+        floor: currentFloor,
+        type: 'corridor',
+        label: 'Corridoio',
+        icon: '📍'
+    };
+    renderMap();
+});
+
 document.getElementById('add-stairs-btn').addEventListener('click', () => {
     const id = 'stairs_' + Date.now();
     const spawnX = (canvas.width > 0 ? canvas.width / 2 : 400) - mapOffset.x;
@@ -318,6 +334,7 @@ function renderMap() {
         if (node.type === 'entrance') ctx.fillStyle = '#10b981';
         else if (node.type === 'checkout') ctx.fillStyle = '#ef4444';
         else if (node.type === 'stairs') ctx.fillStyle = '#8b5cf6';
+        else if (node.type === 'corridor') ctx.fillStyle = '#64748b';
         else ctx.fillStyle = '#3b82f6';
         
         ctx.fill();
