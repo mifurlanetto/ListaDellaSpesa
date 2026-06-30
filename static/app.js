@@ -48,6 +48,8 @@ const supermarketSelect = document.getElementById('active-supermarket-select');
 // Inputs & Forms
 const searchInput = document.getElementById('search-input');
 const addItemForm = document.getElementById('add-item-form');
+const itemNameInput = document.getElementById('item-name');
+const itemQtyInput = document.getElementById('item-qty');
 const itemCategorySelect = document.getElementById('item-category');
 
 // Lists & States
@@ -96,7 +98,18 @@ function loadLocalData() {
     if (savedSup) appSettings.supermarkets = JSON.parse(savedSup);
     
     const savedCat = localStorage.getItem('app_categories');
-    if (savedCat) appSettings.categories = JSON.parse(savedCat);
+    if (savedCat) {
+        const parsed = JSON.parse(savedCat);
+        // Merge missing keywords from defaults (migration path)
+        for (const key in parsed) {
+            if (!parsed[key].keywords && DEFAULT_CATEGORIES[key]) {
+                parsed[key].keywords = [...(DEFAULT_CATEGORIES[key].keywords || [])];
+            } else if (!parsed[key].keywords) {
+                parsed[key].keywords = [];
+            }
+        }
+        appSettings.categories = parsed;
+    }
     
     settingsLastSync = parseFloat(localStorage.getItem('settings_last_sync') || '0');
     
