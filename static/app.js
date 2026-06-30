@@ -8,20 +8,20 @@ let currentTab = "shopping"; // "shopping" or "catalog"
 
 // Default Configurations
 const DEFAULT_CATEGORIES = {
-    Ortofrutta: { id: "Ortofrutta", label: "Ortofrutta", icon: "🍎" },
-    Gastronomia: { id: "Gastronomia", label: "Salumeria e Gastronomia", icon: "🧀" },
-    Macelleria: { id: "Macelleria", label: "Macelleria", icon: "🥩" },
-    Pescheria: { id: "Pescheria", label: "Pescheria", icon: "🐟" },
-    Latticini: { id: "Latticini", label: "Latticini e Freschi", icon: "🥛" },
-    Panetteria: { id: "Panetteria", label: "Panetteria", icon: "🍞" },
-    Dispensa: { id: "Dispensa", label: "Dispensa", icon: "🍝" },
-    Colazione: { id: "Colazione", label: "Colazione e Dolci", icon: "☕" },
-    Bevande: { id: "Bevande", label: "Acqua e Bevande", icon: "🍾" },
-    Surgelati: { id: "Surgelati", label: "Surgelati", icon: "❄️" },
-    Igiene: { id: "Igiene", label: "Igiene Persona", icon: "🧴" },
-    Casa: { id: "Casa", label: "Cura della Casa", icon: "🧼" },
-    Animali: { id: "Animali", label: "Animali", icon: "🐾" },
-    Uncategorized: { id: "Uncategorized", label: "Altro", icon: "❓" }
+    Ortofrutta: { id: "Ortofrutta", label: "Ortofrutta", icon: "🍎", keywords: ['mela', 'mele', 'banana', 'banane', 'clementine', 'mandar', 'aranc', 'limon', 'pomodor', 'insalata', 'carot', 'patat', 'cipoll', 'aglio', 'verdur', 'frutt', 'fragol', 'pesch', 'zucchine', 'melanzan', 'spinaci', 'basilico', 'insalat', 'pero', 'pere', 'uva', 'ananas', 'kiwi', 'funghi', 'sedano', 'prezzemolo', 'zucca', 'peperon', 'broccoli', 'cavolo'] },
+    Gastronomia: { id: "Gastronomia", label: "Salumeria e Gastronomia", icon: "🧀", keywords: ['prosciutto', 'salame', 'mortadella', 'bresaola', 'speck', 'pancetta', 'affettat', 'olive', 'formaggio al banco', 'mozzarella di bufala'] },
+    Macelleria: { id: "Macelleria", label: "Macelleria", icon: "🥩", keywords: ['pollo', 'manzo', 'maiale', 'carne', 'petto', 'tacchino', 'bistecca', 'hamburger', 'cotoletta', 'macinato', 'salsiccia', 'fettine', 'arrost'] },
+    Pescheria: { id: "Pescheria", label: "Pescheria", icon: "🐟", keywords: ['pesce', 'salmone', 'tonno fresco', 'sgombro', 'merluzzo', 'gamber', 'calamar', 'branzino', 'orata', 'cozze', 'vongole', 'polpo'] },
+    Latticini: { id: "Latticini", label: "Latticini e Freschi", icon: "🥛", keywords: ['latte', 'uovo', 'uova', 'formagg', 'mozzarella', 'parmigiano', 'grana', 'yogurt', 'burro', 'panna', 'ricotta', 'gorgonzola', 'pecorino', 'stracchino', 'mascarpone', 'margarina', 'pasta fresca', 'gnocchi', 'tortellini', 'ravioli'] },
+    Panetteria: { id: "Panetteria", label: "Panetteria", icon: "🍞", keywords: ['pane', 'focaccia', 'pizza', 'piadina', 'panino', 'grissini', 'taralli', 'baguette'] },
+    Dispensa: { id: "Dispensa", label: "Dispensa", icon: "🍝", keywords: ['pasta', 'riso', 'farina', 'sale', 'olio', 'aceto', 'sugo', 'salsa', 'passata', 'pesto', 'tonno in scatola', 'legumi', 'fagioli', 'ceci', 'lenticchie', 'dado', 'maionese', 'ketchup', 'spezie', 'pepe', 'origano', 'lievito', 'pane bauletto', 'crackers'] },
+    Colazione: { id: "Colazione", label: "Colazione e Dolci", icon: "☕", keywords: ['zucchero', 'caffe', 'caffè', 'the', 'tè', 'camomilla', 'cereali', 'miele', 'marmellata', 'cioccolato', 'biscott', 'torta', 'brioche', 'croissant', 'fette biscottate', 'merendine', 'nutella', 'cioccolatini', 'caramelle', 'snack', 'patatine'] },
+    Bevande: { id: "Bevande", label: "Acqua e Bevande", icon: "🍾", keywords: ['acqua', 'birra', 'vino', 'coca', 'fanta', 'sprite', 'succo', 'cola', 'bevanda', 'aranciata', 'tassoni', 'gassosa', 'red bull', 'prosecco', 'spumante', 'tonic', 'aperol'] },
+    Surgelati: { id: "Surgelati", label: "Surgelati", icon: "❄️", keywords: ['gelato', 'surgelat', 'piselli surgelati', 'pizza surgelata', 'bastoncini', 'patatine fritte', 'congelat', 'sorbetto', 'sofficini', 'spinaci surgelati'] },
+    Igiene: { id: "Igiene", label: "Igiene Persona", icon: "🧴", keywords: ['sapone', 'shampoo', 'bagnoschiuma', 'dentifricio', 'spazzolino', 'deodorante', 'assorbenti', 'rasoio', 'schiuma da barba', 'crema', 'balsamo', 'carta igienica', 'fazzoletti'] },
+    Casa: { id: "Casa", label: "Cura della Casa", icon: "🧼", keywords: ['scottex', 'detersivo', 'candeggina', 'sgrassatore', 'sacchetti', 'ammorbidente', 'piatti', 'lavatrice', 'spugna', 'panni', 'alluminio', 'pellicola', 'carta forno', 'lavastoviglie', 'pavimenti', 'vetri'] },
+    Animali: { id: "Animali", label: "Animali", icon: "🐾", keywords: ['croccantini', 'scatolette', 'cane', 'cani', 'gatto', 'gatti', 'lettiera', 'cibo animali'] },
+    Uncategorized: { id: "Uncategorized", label: "Altro", icon: "❓", keywords: [] }
 };
 const DEFAULT_ORDER = Object.keys(DEFAULT_CATEGORIES);
 
@@ -66,6 +66,10 @@ const supermarketsList = document.getElementById('supermarkets-list');
 const categoriesList = document.getElementById('categories-list');
 const reorderSection = document.getElementById('supermarket-reorder-section');
 const reorderList = document.getElementById('reorder-list');
+
+// Edit Category Modal
+const editCategoryModal = document.getElementById('edit-category-modal');
+const editCategoryForm = document.getElementById('edit-category-form');
 
 
 // --- Initialization ---
@@ -236,6 +240,23 @@ function renderUI() {
 
 
 // --- Item Operations ---
+
+// Smart Auto-Category selection on typing name
+itemNameInput.addEventListener('input', (e) => {
+    const text = e.target.value.toLowerCase().trim();
+    if (text.length < 3) return;
+    
+    for (const [catId, catMeta] of Object.entries(appSettings.categories)) {
+        if (!catMeta.keywords) continue;
+        for (const kw of catMeta.keywords) {
+            if (text.includes(kw.toLowerCase())) {
+                itemCategorySelect.value = catId;
+                return;
+            }
+        }
+    }
+});
+
 addItemForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const newItem = {
@@ -351,7 +372,8 @@ function renderSettingsLists() {
         div.innerHTML = `
             <div class="settings-item-title">${cat.icon} ${cat.label}</div>
             <div class="item-actions" style="opacity: 1;">
-                <button class="btn-delete" onclick="deleteCategory('${id}')"><i class="fa-solid fa-trash"></i></button>
+                <button class="btn-edit" onclick="openEditCategory('${id}')" title="Modifica"><i class="fa-solid fa-pen"></i></button>
+                <button class="btn-delete" onclick="deleteCategory('${id}')" title="Elimina"><i class="fa-solid fa-trash"></i></button>
             </div>
         `;
         categoriesList.appendChild(div);
@@ -383,7 +405,7 @@ document.getElementById('add-category-btn').addEventListener('click', () => {
     const name = nameInput.value.trim();
     if (name) {
         const id = 'cat_' + generateId();
-        appSettings.categories[id] = { id: id, label: name, icon: icon };
+        appSettings.categories[id] = { id: id, label: name, icon: icon, keywords: [] };
         // Add to all supermarkets' orders at the end
         for (const supId in appSettings.supermarkets) {
             appSettings.supermarkets[supId].order.push(id);
@@ -392,6 +414,36 @@ document.getElementById('add-category-btn').addEventListener('click', () => {
         renderSettingsLists();
         iconInput.value = '';
         nameInput.value = '';
+    }
+});
+
+window.openEditCategory = function(id) {
+    const cat = appSettings.categories[id];
+    if (cat) {
+        document.getElementById('edit-cat-id').value = id;
+        document.getElementById('edit-cat-icon').value = cat.icon || '';
+        document.getElementById('edit-cat-name').value = cat.label || '';
+        document.getElementById('edit-cat-keywords').value = (cat.keywords || []).join(', ');
+        editCategoryModal.classList.remove('hidden');
+    }
+}
+
+document.getElementById('close-edit-cat-modal').addEventListener('click', () => editCategoryModal.classList.add('hidden'));
+document.getElementById('cancel-edit-cat').addEventListener('click', () => editCategoryModal.classList.add('hidden'));
+
+editCategoryForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-cat-id').value;
+    if (appSettings.categories[id]) {
+        appSettings.categories[id].icon = document.getElementById('edit-cat-icon').value.trim() || '❓';
+        appSettings.categories[id].label = document.getElementById('edit-cat-name').value.trim() || appSettings.categories[id].label;
+        
+        const kwString = document.getElementById('edit-cat-keywords').value;
+        appSettings.categories[id].keywords = kwString.split(',').map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
+        
+        saveSettingsLocally();
+        renderSettingsLists();
+        editCategoryModal.classList.add('hidden');
     }
 });
 
