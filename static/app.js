@@ -165,6 +165,82 @@ function populateSelects() {
     }
 }
 
+function getOptimizedCategoryOrder(sup) {
+    if (!sup.graph || !sup.graph.nodes['entrance'] || !sup.graph.nodes['checkout']) return sup.order;
+    
+    const graph = sup.graph;
+    const requiredCats = new Set();
+    
+    // Determine which categories have items needed
+    items.filter(i => !i.deleted && i.needed === 1).forEach(i => requiredCats.add(i.category));
+    
+    // Which of these are actually placed on the map?
+    const placedRequiredCats = Array.from(requiredCats).filter(c => graph.nodes[c]);
+    
+    if (placedRequiredCats.length === 0) return sup.order;
+    
+    const nodes = Object.keys(graph.nodes);
+    const dist = {};
+    nodes.forEach(u => {
+        dist[u] = {};
+        nodes.forEach(v => dist[u][v] = (u === v ? 0 : Infinity));
+    });
+    
+    graph.edges.forEach(e => {
+        const n1 = graph.nodes[e.u];
+        const n2 = graph.nodes[e.v];
+        if(!n1 || !n2) return;
+        
+        const dx = n1.x - n2.x;
+        const dy = n1.y - n2.y;
+        const df = Math.abs(n1.floor - n2.floor);
+        const weight = Math.sqrt(dx*dx + dy*dy) + df * 1000;
+        
+        dist[e.u][e.v] = Math.min(dist[e.u][e.v] || Infinity, weight);
+        dist[e.v][e.u] = dist[e.u][e.v];
+    });
+    
+    // Floyd-Warshall
+    nodes.forEach(k => {
+        nodes.forEach(i => {
+            nodes.forEach(j => {
+                if (dist[i][k] + dist[k][j] < dist[i][j]) {
+                    dist[i][j] = dist[i][k] + dist[k][j];
+                }
+            });
+        });
+    });
+    
+    // Nearest neighbor TSP starting from entrance
+    let current = 'entrance';
+    const unvisited = new Set(placedRequiredCats);
+    const orderedCats = [];
+    
+    while(unvisited.size > 0) {
+        let bestDist = Infinity;
+        let bestNext = null;
+        for (const nxt of unvisited) {
+            if (dist[current][nxt] < bestDist) {
+                bestDist = dist[current][nxt];
+                bestNext = nxt;
+            }
+        }
+        if (bestNext === null || bestDist === Infinity) {
+            unvisited.forEach(u => orderedCats.push(u));
+            break;
+        }
+        orderedCats.push(bestNext);
+        unvisited.delete(bestNext);
+        current = bestNext;
+    }
+    
+    // Append any unplaced categories at the end
+    const allCats = Object.keys(appSettings.categories);
+    const unplaced = allCats.filter(c => !orderedCats.includes(c));
+    
+    return [...orderedCats, ...unplaced];
+}
+
 function renderUI() {
     // Determine which items to show
     let filteredItems = items.filter(item => !item.deleted);
@@ -207,10 +283,14 @@ function renderUI() {
     const activeSup = appSettings.supermarkets[activeSupermarketId];
     let order = activeSup ? activeSup.order : DEFAULT_ORDER;
     
-    // Append any categories that exist but aren't in the supermarket's order array
-    const allCatKeys = Object.keys(appSettings.categories);
-    const missingKeys = allCatKeys.filter(k => !order.includes(k));
-    order = [...order, ...missingKeys];
+    if (currentTab === 'shopping' && activeSup && activeSup.graph) {
+        order = getOptimizedCategoryOrder(activeSup);
+    } else {
+        // Append any categories that exist but aren't in the supermarket's order array
+        const allCatKeys = Object.keys(appSettings.categories);
+        const missingKeys = allCatKeys.filter(k => !order.includes(k));
+        order = [...order, ...missingKeys];
+    }
 
     // Render cards
     order.forEach(catId => {
@@ -376,6 +456,7 @@ function renderSettingsLists() {
         div.innerHTML = `
             <div class="settings-item-title"><i class="fa-solid fa-shop"></i> ${sup.name}</div>
             <div class="item-actions" style="opacity: 1;">
+                <button title="Mappa" onclick="openStoreMap('${id}')"><i class="fa-solid fa-map"></i></button>
                 <button title="Ordina Corsie" onclick="openReorder('${id}')"><i class="fa-solid fa-arrow-down-a-z"></i></button>
                 ${Object.keys(appSettings.supermarkets).length > 1 ? `<button class="btn-delete" onclick="deleteSupermarket('${id}')"><i class="fa-solid fa-trash"></i></button>` : ''}
             </div>

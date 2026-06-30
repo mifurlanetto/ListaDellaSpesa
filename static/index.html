@@ -238,7 +238,52 @@
         </div>
     </div>
 
-    <!-- Custom Script -->
+    <!-- Map Editor Modal -->
+    <div id="store-map-modal" class="modal hidden" style="z-index: 1020;">
+        <div class="modal-content card" style="width: 95vw; height: 95vh; max-width: 1200px; display: flex; flex-direction: column; padding: 0;">
+            <div class="modal-header" style="padding: 1rem;">
+                <h2 id="store-map-title">Mappa Supermercato</h2>
+                <div>
+                    <button id="save-map-btn" class="btn-primary" style="margin-right: 0.5rem;">Salva</button>
+                    <button id="close-map-btn" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            </div>
+            <div style="display: flex; flex: 1; overflow: hidden; border-top: 1px solid var(--border-color);">
+                <!-- Sidebar -->
+                <div style="width: 250px; background: rgba(15, 23, 42, 0.4); padding: 1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; border-right: 1px solid var(--border-color);">
+                    <div>
+                        <label>Piano:</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                            <button id="floor-down-btn" class="btn-icon"><i class="fa-solid fa-minus"></i></button>
+                            <span id="current-floor-display" style="font-weight: bold; font-size: 1.2rem; color: var(--primary-color);">0</span>
+                            <button id="floor-up-btn" class="btn-icon"><i class="fa-solid fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                        <button id="tool-move" class="btn-secondary active"><i class="fa-solid fa-hand"></i> Sposta</button>
+                        <button id="tool-connect" class="btn-secondary"><i class="fa-solid fa-link"></i> Collega</button>
+                        <button id="tool-erase" class="btn-secondary"><i class="fa-solid fa-eraser"></i> Cancella</button>
+                    </div>
+                    <div>
+                        <h4 style="margin-bottom: 0.5rem;">Da Posizionare</h4>
+                        <div id="unplaced-nodes-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <!-- Unplaced items will appear here -->
+                        </div>
+                    </div>
+                    <div style="margin-top: auto;">
+                        <button id="add-stairs-btn" class="btn-secondary" style="width: 100%;"><i class="fa-solid fa-stairs"></i> Scale/Ascensore</button>
+                    </div>
+                </div>
+                <!-- Canvas -->
+                <div style="flex: 1; position: relative; background: #0f172a; overflow: hidden;" id="map-canvas-container">
+                    <canvas id="store-map-canvas" style="width: 100%; height: 100%; display: block; cursor: grab; touch-action: none;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Scripts -->
     <script src="/static/app.js"></script>
+    <script src="/static/map-editor.js"></script>
 </body>
 </html>
