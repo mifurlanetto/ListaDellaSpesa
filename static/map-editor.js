@@ -177,16 +177,15 @@ function getNodeAt(x, y) {
 }
 
 if(canvas) {
-    canvas.addEventListener('mousedown', e => {
-        const pos = getMousePos(e);
-        const clickedNodeId = getNodeAt(pos.x, pos.y);
+    function handleStart(x, y) {
+        const clickedNodeId = getNodeAt(x, y);
         
         if (mapTool === 'move') {
             if (clickedNodeId) {
                 dragNode = clickedNodeId;
             } else {
                 isDraggingMap = true;
-                dragStart = { x: pos.x - mapOffset.x, y: pos.y - mapOffset.y };
+                dragStart = { x: x - mapOffset.x, y: y - mapOffset.y };
                 canvas.style.cursor = 'grabbing';
             }
         } else if (mapTool === 'connect') {
@@ -216,8 +215,8 @@ if(canvas) {
                     renderMap();
                 }
             } else {
-                const worldX = pos.x - mapOffset.x;
-                const worldY = pos.y - mapOffset.y;
+                const worldX = x - mapOffset.x;
+                const worldY = y - mapOffset.y;
                 let edgeToDelete = -1;
                 for (let i = 0; i < mapData.edges.length; i++) {
                     const edge = mapData.edges[i];
@@ -244,30 +243,67 @@ if(canvas) {
                 }
             }
         }
+    }
+
+    function handleMove(x, y) {
+        if (dragNode) {
+            mapData.nodes[dragNode].x = x - mapOffset.x;
+            mapData.nodes[dragNode].y = y - mapOffset.y;
+            renderMap();
+        } else if (isDraggingMap) {
+            mapOffset.x = x - dragStart.x;
+            mapOffset.y = y - dragStart.y;
+            renderMap();
+        }
+    }
+
+    function handleEnd() {
+        dragNode = null;
+        isDraggingMap = false;
+        if (mapTool === 'move') canvas.style.cursor = 'grab';
+    }
+
+    // Mouse Listeners
+    canvas.addEventListener('mousedown', e => {
+        const pos = getMousePos(e);
+        handleStart(pos.x, pos.y);
     });
 
     canvas.addEventListener('mousemove', e => {
         const pos = getMousePos(e);
-        if (dragNode) {
-            mapData.nodes[dragNode].x = pos.x - mapOffset.x;
-            mapData.nodes[dragNode].y = pos.y - mapOffset.y;
-            renderMap();
-        } else if (isDraggingMap) {
-            mapOffset.x = pos.x - dragStart.x;
-            mapOffset.y = pos.y - dragStart.y;
-            renderMap();
-        }
+        handleMove(pos.x, pos.y);
     });
 
     canvas.addEventListener('mouseup', () => {
-        dragNode = null;
-        isDraggingMap = false;
-        if (mapTool === 'move') canvas.style.cursor = 'grab';
+        handleEnd();
     });
+
     canvas.addEventListener('mouseleave', () => {
-        dragNode = null;
-        isDraggingMap = false;
+        handleEnd();
     });
+
+    // Touch Support for Mobile / Tablet Viewports
+    canvas.addEventListener('touchstart', e => {
+        if (e.touches.length === 1) {
+            const pos = getMousePos(e.touches[0]);
+            handleStart(pos.x, pos.y);
+            // Prevent page scrolling when drawing or dragging on the map canvas
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', e => {
+        if (e.touches.length === 1) {
+            const pos = getMousePos(e.touches[0]);
+            handleMove(pos.x, pos.y);
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+        handleEnd();
+        e.preventDefault();
+    }, { passive: false });
 }
 
 function renderMap() {
