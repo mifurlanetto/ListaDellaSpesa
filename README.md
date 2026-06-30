@@ -12,18 +12,18 @@ L'applicazione è strutturata in due schede principali pensate per le diverse fa
    - Gli articoli selezionati (`needed = 1`) compariranno automaticamente nella scheda della spesa.
 
 2. **🛒 Da Comprare (Fase di Spesa al Supermercato)**:
-   - Mostra solo gli articoli selezionati per l'acquisto corrente, ordinati e raggruppati per corsia/categoria (es. Ortofrutta, Latticini).
+   - Mostra solo gli articoli selezionati per l'acquisto corrente, ordinati e raggruppati per corsia/categoria (es. Ortofrutta, Latticini) nell'ordine esatto che hai configurato per il supermercato attivo.
    - Quando sei nel negozio e metti un articolo nel carrello fisicamente, ti basta **deselezionarlo (tapparci sopra)**. L'articolo sfumerà e scivolerà fuori dalla lista attiva, tornando nel catalogo come non selezionato (`needed = 0`) per la prossima volta. Non serve cancellare e riscrivere i prodotti ogni settimana!
 
 ---
 
 ## 🌟 Caratteristiche Principali
 
-- **Offline-First & Auto-Sync**: Puoi compilare o deselezionare elementi anche nei punti vendita senza segnale internet. L'app salva tutto localmente tramite `localStorage` e risisincronizza le modifiche in background non appena la connettività si ripristina.
-- **Rilevamento Categorie Intelligente**: Durante la digitazione di un nuovo prodotto, l'app analizza le parole chiave inserite (es. "latte", "mele", "pane") e lo assegna automaticamente alla categoria corretta (Ortofrutta, Latticini, Dispensa, ecc.) senza costringerti a sceglierla a mano.
-- **Interfaccia Grafica Premium**: Un design moderno e responsive ottimizzato per smartphone con tema scuro, elementi in stile *glassmorphism*, badge luminosi per lo stato della connessione/sincronizzazione ed animazioni fluide.
+- **Offline-First & Auto-Sync (Articoli + Impostazioni)**: Puoi compilare la lista o deselezionare elementi anche nei supermercati senza segnale internet. L'app salva tutto localmente tramite `localStorage` e risincronizza le modifiche in background non appena la connettività si ripristina. Oltre agli articoli, l'app sincronizza anche la configurazione dei supermercati e delle categorie.
+- **Gestione Multi-Supermercato**: Puoi definire molteplici supermercati (es. "Coop", "Esselunga", "Lidl") e configurare per ciascuno di essi un ordine personalizzato delle corsie per facilitare il percorso all'interno del punto vendita.
+- **Categorie e Smartwords Personalizzabili**: Puoi creare, modificare ed eliminare le categorie merceologiche direttamente dal menu. Ciascuna categoria supporta un elenco di "Smartwords" (parole chiave) personalizzabili: digitando un nuovo prodotto, l'app lo assegnerà in automatico alla categoria corretta se il nome contiene una delle parole chiave.
 - **Risoluzione dei Conflitti Semplice**: Utilizza un meccanismo di sincronizzazione basato su timestamps con logica *Last-Write-Wins* (L'ultima scrittura vince).
-- **Pulizia Automatica**: Per mantenere lo spazio di archiviazione locale del browser minimo, gli articoli eliminati definitivamente dal catalogo vengono rimossi da `localStorage` non appena il server conferma la ricezione della loro eliminazione.
+- **Interfaccia Grafica Premium**: Un design moderno e responsive ottimizzato per smartphone con tema scuro, elementi in stile *glassmorphism*, badge luminosi per lo stato della connessione/sincronizzazione ed animazioni fluide.
 
 ## 🛠️ Stack Tecnologico
 
@@ -54,6 +54,7 @@ Visto l'utilizzo di `uv` e dei metadati in linea dello script (PEP 723), non è 
 
 ```text
 ListaDellaSpesa/
+├── .gitignore           # File per escludere file temporanei e database locali
 ├── database.db          # Database SQLite creato automaticamente all'avvio
 ├── main.py              # Server FastAPI, API di sincronizzazione e gestione DB
 ├── README.md            # Questa guida
@@ -65,8 +66,13 @@ ListaDellaSpesa/
 
 ## 🔄 Protocollo di Sincronizzazione
 
-1. **Stato Locale**: Il client mantiene in `localStorage` l'elenco degli articoli attivi, modificati o contrassegnati come eliminati (`deleted: 1`), oltre all'ultimo timestamp di sincronizzazione riuscita (`last_sync_time`).
-2. **Push delle Modifiche**: Il client invia periodicamente o al cambio di rete tutte le modifiche locali aventi `updated_at > last_sync_time`.
-3. **Merge sul Server**: Il server riceve le modifiche e le inserisce/aggiorna nel database SQLite solo se il timestamp del client è più recente di quello già presente a DB per quell'articolo.
-4. **Pull delle Modifiche**: Il server restituisce al client tutti gli articoli modificati da chiunque altro dopo il `last_sync_time` del client.
-5. **Risoluzione e Pulizia**: Il client unisce le modifiche ricevute e rimuove localmente tutti gli articoli con `deleted: 1` che sono stati registrati con successo a DB (in quanto sia il server che gli altri client ne sono ora a conoscenza).
+La sincronizzazione si divide in due flussi paralleli:
+
+1. **Sincronizzazione Articoli (`/api/sync`)**:
+   - Il client invia gli articoli modificati localmente dopo l'ultimo timestamp di sincronizzazione riuscita (`groceries_last_sync`).
+   - Il server aggiorna gli elementi solo se il timestamp del client è maggiore di quello a database, ed invia indietro gli articoli modificati da altri utenti.
+   - Gli elementi eliminati vengono purificati dal database locale non appena il server conferma la ricezione.
+
+2. **Sincronizzazione Impostazioni (`/api/sync_settings`)**:
+   - Il client sincronizza a database le configurazioni dei supermercati e delle categorie (salvate come stringhe JSON con logica Last-Write-Wins).
+   - Questo permette a tutti i componenti del nucleo familiare (2 o 3 utenti) di condividere lo stesso catalogo di categorie ed elenchi di supermercati con relativo ordinamento corsie.
