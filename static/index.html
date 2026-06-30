@@ -56,38 +56,15 @@
             </button>
         </div>
 
-        <!-- Add Item Form -->
-        <section class="add-item-section card">
-            <form id="add-item-form">
-                <div class="form-row">
-                    <div class="input-group main-input">
-                        <label for="item-name">Nuovo articolo nel catalogo</label>
-                        <input type="text" id="item-name" placeholder="Es. Clementine, Latte, Pane..." required autocomplete="off">
-                    </div>
-                    <div class="input-group qty-input">
-                        <label for="item-qty">Quantità</label>
-                        <input type="text" id="item-qty" placeholder="Es. 1kg, 2 conf.">
-                    </div>
-                </div>
-                <div class="form-row flex-end">
-                    <div class="input-group category-select">
-                        <label for="item-category">Categoria</label>
-                        <select id="item-category">
-                            <!-- Populated dynamically via JS -->
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-primary">
-                        <i class="fa-solid fa-plus"></i> Aggiungi
-                    </button>
-                </div>
-            </form>
-        </section>
 
         <!-- Actions Bar (Search, Supermarket Selector, Settings, Sync) -->
         <div class="actions-bar">
-            <div class="search-bar">
+            <div class="search-bar" style="display: flex; align-items: center; width: 100%;">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
-                <input type="text" id="search-input" placeholder="Cerca articoli...">
+                <input type="text" id="search-input" placeholder="Cerca o aggiungi articolo..." autocomplete="off" style="flex: 1;">
+                <button id="quick-add-btn" class="btn-primary" style="margin-left: 0.5rem; padding: 0.75rem 1rem; border-radius: 8px;" title="Aggiungi nuovo articolo">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
             </div>
             
             <div class="supermarket-selector-container">
@@ -123,7 +100,7 @@
             <div id="empty-catalog" class="empty-state hidden">
                 <div class="empty-icon">📋</div>
                 <h3>Nessun articolo nel catalogo</h3>
-                <p>Usa il modulo in alto per aggiungere il primo articolo.</p>
+                <p>Cerca un articolo in alto e clicca "+" per aggiungerlo.</p>
             </div>
         </main>
     </div>
@@ -132,7 +109,7 @@
     <div id="edit-modal" class="modal hidden">
         <div class="modal-content card">
             <div class="modal-header">
-                <h2>Modifica Articolo</h2>
+                <h2 id="edit-modal-title">Modifica Articolo</h2>
                 <button id="close-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="edit-item-form">

@@ -48,10 +48,7 @@ const supermarketSelect = document.getElementById('active-supermarket-select');
 
 // Inputs & Forms
 const searchInput = document.getElementById('search-input');
-const addItemForm = document.getElementById('add-item-form');
-const itemNameInput = document.getElementById('item-name');
-const itemQtyInput = document.getElementById('item-qty');
-const itemCategorySelect = document.getElementById('item-category');
+const quickAddBtn = document.getElementById('quick-add-btn');
 
 // Lists & States
 const listViewContainer = document.getElementById('grocery-list-view');
@@ -161,13 +158,7 @@ function populateSelects() {
         .map(c => `<option value="${c.id}">${c.icon} ${c.label}</option>`)
         .join('');
     
-    itemCategorySelect.innerHTML = catsHTML;
     editItemCategorySelect.innerHTML = catsHTML;
-    
-    // Ensure "Uncategorized" is selected by default if available for new items
-    if (appSettings.categories["Uncategorized"]) {
-        itemCategorySelect.value = "Uncategorized";
-    }
 }
 
 function getOptimizedCategoryOrder(sup) {
@@ -338,10 +329,9 @@ function renderUI() {
 
 // --- Item Operations ---
 
-// Smart Auto-Category selection on typing name
-itemNameInput.addEventListener('input', (e) => {
-    const text = e.target.value.toLowerCase().trim();
-    if (text.length < 3) return;
+function getAutoCategory(text) {
+    const textClean = text.toLowerCase().trim();
+    if (textClean.length < 3) return "Uncategorized";
     
     // Prioritize modifier categories (e.g. Frozen, Pets, Beverages) first
     const modifiers = ['Surgelati', 'Animali', 'Bevande', 'Igiene', 'Casa'];
@@ -352,31 +342,84 @@ itemNameInput.addEventListener('input', (e) => {
         const catMeta = appSettings.categories[catId];
         if (!catMeta || !catMeta.keywords) continue;
         for (const kw of catMeta.keywords) {
-            if (text.includes(kw.toLowerCase())) {
-                itemCategorySelect.value = catId;
-                return;
+            if (textClean.includes(kw.toLowerCase())) {
+                return catId;
             }
         }
     }
-});
+    return "Uncategorized";
+}
 
-addItemForm.addEventListener('submit', (e) => {
+function handleSearchSubmit() {
+    const query = searchInput.value.trim();
+    if (!query) return;
+    
+    // Search if it already exists (case-insensitive)
+    const existingItem = items.find(i => i.name.toLowerCase() === query.toLowerCase());
+    if (existingItem) {
+        existingItem.needed = 1;
+        existingItem.deleted = 0;
+        existingItem.updated_at = Date.now();
+        saveItemsLocally();
+        renderUI();
+        searchInput.value = '';
+        searchQuery = '';
+        if (isOnline) syncItems();
+    } else {
+        document.getElementById('edit-item-id').value = ""; // indicates new item
+        document.getElementById('edit-item-name').value = query;
+        document.getElementById('edit-item-qty').value = "";
+        
+        const autoCat = getAutoCategory(query);
+        editItemCategorySelect.value = autoCat;
+        
+        document.getElementById('edit-modal-title').textContent = "Aggiungi Articolo";
+        editModal.classList.remove('hidden');
+    }
+}
+
+editItemForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const newItem = {
-        id: generateId(),
-        name: document.getElementById('item-name').value.trim(),
-        quantity: document.getElementById('item-qty').value.trim(),
-        category: itemCategorySelect.value,
-        needed: currentTab === 'shopping' ? 1 : 0,
-        deleted: 0,
-        updated_at: Date.now()
-    };
-    items.push(newItem);
+    const id = document.getElementById('edit-item-id').value;
+    const name = document.getElementById('edit-item-name').value.trim();
+    const qty = document.getElementById('edit-item-qty').value.trim();
+    const category = document.getElementById('edit-item-category').value;
+    
+    if (id) {
+        // Editing existing item
+        const item = items.find(i => i.id === id);
+        if (item) {
+            item.name = name;
+            item.quantity = qty;
+            item.category = category;
+            item.updated_at = Date.now();
+        }
+    } else {
+        // Creating new item
+        const newItem = {
+            id: generateId(),
+            name: name,
+            quantity: qty,
+            category: category,
+            needed: 1, // Added from quick bar means we want it
+            deleted: 0,
+            updated_at: Date.now()
+        };
+        items.push(newItem);
+        searchInput.value = '';
+        searchQuery = '';
+    }
+    
     saveItemsLocally();
     renderUI();
-    addItemForm.reset();
-    if (appSettings.categories["Uncategorized"]) itemCategorySelect.value = "Uncategorized";
+    editModal.classList.add('hidden');
     if (isOnline) syncItems();
+});
+
+// Search listeners
+searchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    renderUI();
 });
 
 window.toggleItemNeeded = function(id) {
@@ -410,25 +453,10 @@ window.openEditModal = function(id) {
         document.getElementById('edit-item-name').value = item.name;
         document.getElementById('edit-item-qty').value = item.quantity;
         document.getElementById('edit-item-category').value = item.category;
+        document.getElementById('edit-modal-title').textContent = "Modifica Articolo";
         editModal.classList.remove('hidden');
     }
 };
-
-editItemForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const id = document.getElementById('edit-item-id').value;
-    const item = items.find(i => i.id === id);
-    if (item) {
-        item.name = document.getElementById('edit-item-name').value.trim();
-        item.quantity = document.getElementById('edit-item-qty').value.trim();
-        item.category = document.getElementById('edit-item-category').value;
-        item.updated_at = Date.now();
-        saveItemsLocally();
-        renderUI();
-        editModal.classList.add('hidden');
-        if (isOnline) syncItems();
-    }
-});
 
 
 // --- Settings Dashboard Operations ---
@@ -770,6 +798,13 @@ function updateRouteToggleUI() {
 document.getElementById('tab-shopping').addEventListener('click', (e) => { currentTab = 'shopping'; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); e.currentTarget.classList.add('active'); renderUI(); });
 document.getElementById('tab-catalog').addEventListener('click', (e) => { currentTab = 'catalog'; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); e.currentTarget.classList.add('active'); renderUI(); });
 searchInput.addEventListener('input', (e) => { searchQuery = e.target.value.trim(); renderUI(); });
+searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        handleSearchSubmit();
+    }
+});
+quickAddBtn.addEventListener('click', handleSearchSubmit);
 document.getElementById('close-modal').addEventListener('click', () => { editModal.classList.add('hidden'); });
 document.getElementById('cancel-edit').addEventListener('click', () => { editModal.classList.add('hidden'); });
 syncButton.addEventListener('click', () => { syncAll(true); });
