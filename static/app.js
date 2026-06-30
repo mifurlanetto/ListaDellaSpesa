@@ -5,7 +5,7 @@ let isSyncing = false;
 let isOnline = navigator.onLine;
 let searchQuery = "";
 let currentTab = "shopping"; // "shopping" or "catalog"
-let optimizeRoute = false;
+let lastSyncTime = Date.now();
 
 // Default Configurations
 const DEFAULT_CATEGORIES = {
@@ -41,10 +41,11 @@ let editingSupermarketId = null;
 // Status
 const connectionBadge = document.getElementById('connection-badge');
 const syncBadge = document.getElementById('sync-badge');
+const syncText = document.getElementById('sync-text');
 const offlineBanner = document.getElementById('offline-banner');
-const syncButton = document.getElementById('sync-button');
 const settingsButton = document.getElementById('settings-button');
 const supermarketSelect = document.getElementById('active-supermarket-select');
+const supermarketSelectorContainer = document.getElementById('supermarket-selector-container');
 
 // Inputs & Forms
 const searchInput = document.getElementById('search-input');
@@ -90,6 +91,7 @@ function loadLocalData() {
     const savedItems = localStorage.getItem('groceries_items');
     items = savedItems ? JSON.parse(savedItems) : [];
     itemsLastSync = parseFloat(localStorage.getItem('groceries_last_sync') || '0');
+    lastSyncTime = parseFloat(localStorage.getItem('groceries_last_sync') || Date.now().toString());
     
     // Settings
     const savedSup = localStorage.getItem('app_supermarkets');
@@ -110,10 +112,6 @@ function loadLocalData() {
     }
     
     settingsLastSync = parseFloat(localStorage.getItem('settings_last_sync') || '0');
-    
-    // Route optimization state
-    optimizeRoute = localStorage.getItem('optimize_route') === 'true';
-    updateRouteToggleUI();
     
     // Active View State
     activeSupermarketId = localStorage.getItem('active_supermarket') || 'default';
@@ -237,6 +235,11 @@ function getOptimizedCategoryOrder(sup) {
 }
 
 function renderUI() {
+    // Show/Hide Supermarket Selector based on current tab
+    if (supermarketSelectorContainer) {
+        supermarketSelectorContainer.style.display = currentTab === 'shopping' ? 'flex' : 'none';
+    }
+
     // Determine which items to show
     let filteredItems = items.filter(item => !item.deleted);
     
@@ -278,7 +281,7 @@ function renderUI() {
     const activeSup = appSettings.supermarkets[activeSupermarketId];
     let order = activeSup ? activeSup.order : DEFAULT_ORDER;
     
-    if (currentTab === 'shopping' && activeSup && activeSup.graph && optimizeRoute) {
+    if (currentTab === 'shopping' && activeSup && activeSup.graph) {
         order = getOptimizedCategoryOrder(activeSup);
     } else {
         // Append any categories that exist but aren't in the supermarket's order array
@@ -360,22 +363,24 @@ function handleSearchSubmit() {
         existingItem.needed = 1;
         existingItem.deleted = 0;
         existingItem.updated_at = Date.now();
-        saveItemsLocally();
-        renderUI();
-        searchInput.value = '';
-        searchQuery = '';
-        if (isOnline) syncItems();
     } else {
-        document.getElementById('edit-item-id').value = ""; // indicates new item
-        document.getElementById('edit-item-name').value = query;
-        document.getElementById('edit-item-qty').value = "";
-        
-        const autoCat = getAutoCategory(query);
-        editItemCategorySelect.value = autoCat;
-        
-        document.getElementById('edit-modal-title').textContent = "Aggiungi Articolo";
-        editModal.classList.remove('hidden');
+        const newItem = {
+            id: generateId(),
+            name: query,
+            quantity: "",
+            category: getAutoCategory(query),
+            needed: 1, // Added from quick bar means we want it
+            deleted: 0,
+            updated_at: Date.now()
+        };
+        items.push(newItem);
     }
+    
+    saveItemsLocally();
+    renderUI();
+    searchInput.value = '';
+    searchQuery = '';
+    if (isOnline) syncItems();
 }
 
 editItemForm.addEventListener('submit', (e) => {
@@ -401,7 +406,7 @@ editItemForm.addEventListener('submit', (e) => {
             name: name,
             quantity: qty,
             category: category,
-            needed: 1, // Added from quick bar means we want it
+            needed: 1,
             deleted: 0,
             updated_at: Date.now()
         };
@@ -540,7 +545,19 @@ document.getElementById('add-category-btn').addEventListener('click', () => {
         appSettings.categories[id] = { id: id, label: name, icon: icon, keywords: [] };
         // Add to all supermarkets' orders at the end
         for (const supId in appSettings.supermarkets) {
-            appSettings.supermarkets[supId].order.push(id);
+            const sup = appSettings.supermarkets[supId];
+            sup.order.push(id);
+            if (sup.graph) {
+                // Automatically place it in the center of the graph
+                sup.graph.nodes[id] = {
+                    x: 200,
+                    y: 250,
+                    floor: 0,
+                    type: 'category',
+                    label: name,
+                    icon: icon
+                };
+            }
         }
         saveSettingsLocally();
         renderSettingsLists();
@@ -725,8 +742,10 @@ async function syncItemsRequest() {
     
     items = items.filter(item => !(item.deleted && item.updated_at <= data.server_time));
     itemsLastSync = data.server_time;
+    lastSyncTime = Date.now();
     localStorage.setItem('groceries_last_sync', itemsLastSync.toString());
     saveItemsLocally();
+    updateSyncUI();
 }
 
 async function syncSettingsRequest() {
@@ -754,46 +773,47 @@ async function syncSettingsRequest() {
     });
     
     settingsLastSync = data.server_time;
+    lastSyncTime = Date.now();
     localStorage.setItem('settings_last_sync', settingsLastSync.toString());
     saveSettingsLocally(false); // don't trigger sync loop
+    updateSyncUI();
 }
 
 function updateSyncUI() {
+    if (!syncText) return;
     if (isSyncing) {
         syncBadge.className = 'badge syncing';
-        syncBadge.innerHTML = '<i class="fa-solid fa-arrows-rotate"></i><span class="badge-text">Sincronizzazione...</span>';
-        syncButton.classList.add('spinning');
+        syncText.textContent = 'Sincronizzazione...';
+    } else if (!isOnline) {
+        syncBadge.className = 'badge offline';
+        syncText.textContent = 'Offline';
     } else {
         syncBadge.className = 'badge synced';
-        syncBadge.innerHTML = '<i class="fa-solid fa-check"></i><span class="badge-text">Sincronizzato</span>';
-        syncButton.classList.remove('spinning');
+        const diffSec = Math.floor((Date.now() - lastSyncTime) / 1000);
+        if (diffSec < 10) {
+            syncText.textContent = 'Sincronizzato (ora)';
+        } else if (diffSec < 60) {
+            syncText.textContent = `Sincronizzato (${diffSec}s fa)`;
+        } else {
+            const diffMin = Math.floor(diffSec / 60);
+            syncText.textContent = `Sincronizzato (${diffMin}m fa)`;
+        }
     }
 }
 
 // Network events
 window.addEventListener('online', () => { isOnline = true; offlineBanner.classList.add('hidden'); connectionBadge.className = 'badge online'; connectionBadge.innerHTML = '<i class="fa-solid fa-wifi"></i><span class="badge-text">Online</span>'; syncAll(); });
-window.addEventListener('offline', () => { isOnline = false; offlineBanner.classList.remove('hidden'); connectionBadge.className = 'badge offline'; connectionBadge.innerHTML = '<i class="fa-solid fa-wifi-slash"></i><span class="badge-text">Offline</span>'; });
+window.addEventListener('offline', () => { isOnline = false; offlineBanner.classList.remove('hidden'); connectionBadge.className = 'badge offline'; connectionBadge.innerHTML = '<i class="fa-solid fa-wifi-slash"></i><span class="badge-text">Offline</span>'; updateSyncUI(); });
 
-// Navigation
-const routeToggleBtn = document.getElementById('route-toggle-btn');
-routeToggleBtn.addEventListener('click', () => {
-    optimizeRoute = !optimizeRoute;
-    localStorage.setItem('optimize_route', optimizeRoute);
-    updateRouteToggleUI();
-    renderUI();
+// Clickable Sync Badge
+syncBadge.addEventListener('click', () => {
+    if (!isSyncing && isOnline) {
+        syncAll(true);
+    }
 });
 
-function updateRouteToggleUI() {
-    if (routeToggleBtn) {
-        if (optimizeRoute) {
-            routeToggleBtn.classList.add('active');
-            routeToggleBtn.style.color = 'var(--primary-color)';
-        } else {
-            routeToggleBtn.classList.remove('active');
-            routeToggleBtn.style.color = '';
-        }
-    }
-}
+// Sync timer updater
+setInterval(updateSyncUI, 10000);
 
 document.getElementById('tab-shopping').addEventListener('click', (e) => { currentTab = 'shopping'; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); e.currentTarget.classList.add('active'); renderUI(); });
 document.getElementById('tab-catalog').addEventListener('click', (e) => { currentTab = 'catalog'; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); e.currentTarget.classList.add('active'); renderUI(); });
@@ -807,7 +827,7 @@ searchInput.addEventListener('keydown', (e) => {
 quickAddBtn.addEventListener('click', handleSearchSubmit);
 document.getElementById('close-modal').addEventListener('click', () => { editModal.classList.add('hidden'); });
 document.getElementById('cancel-edit').addEventListener('click', () => { editModal.classList.add('hidden'); });
-syncButton.addEventListener('click', () => { syncAll(true); });
 
 // Boot
 init();
+updateSyncUI();

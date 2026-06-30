@@ -29,9 +29,9 @@
                     <i class="fa-solid fa-wifi"></i>
                     <span class="badge-text">Online</span>
                 </div>
-                <div id="sync-badge" class="badge synced">
+                <div id="sync-badge" class="badge synced" style="cursor: pointer;" title="Clicca per sincronizzare ora">
                     <i class="fa-solid fa-rotate"></i>
-                    <span class="badge-text">Sincronizzato</span>
+                    <span class="badge-text" id="sync-text">Sincronizzato</span>
                 </div>
             </div>
         </header>
@@ -67,21 +67,15 @@
                 </button>
             </div>
             
-            <div class="supermarket-selector-container">
+            <div id="supermarket-selector-container" class="supermarket-selector-container">
                 <i class="fa-solid fa-shop supermarket-icon"></i>
                 <select id="active-supermarket-select" title="Seleziona Supermercato">
                     <!-- Populated dynamically -->
                 </select>
             </div>
 
-            <button id="route-toggle-btn" class="btn-secondary" title="Ottimizza percorso con mappa">
-                <i class="fa-solid fa-route"></i>
-            </button>
             <button id="settings-button" class="btn-secondary" title="Impostazioni">
                 <i class="fa-solid fa-gear"></i>
-            </button>
-            <button id="sync-button" class="btn-secondary" title="Sincronizza ora">
-                <i class="fa-solid fa-arrows-rotate"></i>
             </button>
         </div>
 
