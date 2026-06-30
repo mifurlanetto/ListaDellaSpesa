@@ -259,8 +259,14 @@ itemNameInput.addEventListener('input', (e) => {
     const text = e.target.value.toLowerCase().trim();
     if (text.length < 3) return;
     
-    for (const [catId, catMeta] of Object.entries(appSettings.categories)) {
-        if (!catMeta.keywords) continue;
+    // Prioritize modifier categories (e.g. Frozen, Pets, Beverages) first
+    const modifiers = ['Surgelati', 'Animali', 'Bevande', 'Igiene', 'Casa'];
+    const otherCats = Object.keys(appSettings.categories).filter(k => !modifiers.includes(k));
+    const priorityOrder = [...modifiers, ...otherCats];
+    
+    for (const catId of priorityOrder) {
+        const catMeta = appSettings.categories[catId];
+        if (!catMeta || !catMeta.keywords) continue;
         for (const kw of catMeta.keywords) {
             if (text.includes(kw.toLowerCase())) {
                 itemCategorySelect.value = catId;
