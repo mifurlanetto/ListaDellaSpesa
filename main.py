@@ -2,6 +2,7 @@
 # dependencies = [
 #   "fastapi",
 #   "uvicorn",
+#   "python-multipart",
 # ]
 # ///
 
@@ -9,9 +10,9 @@ import os
 import sqlite3
 import time
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response, Form
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 
 # Initialize database
@@ -58,6 +59,65 @@ def init_db():
 init_db()
 
 app = FastAPI(title="ListaDellaSpesa API")
+
+PASSWORD = os.environ.get("SPESA_PASS", "spesa123")
+AUTH_COOKIE = "spesa_auth"
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    # Exclude login routes and static assets when not authenticated
+    if request.url.path in ["/login", "/api/status", "/favicon.ico"]:
+        return await call_next(request)
+        
+    # Check cookie
+    cookie = request.cookies.get(AUTH_COOKIE)
+    if cookie != PASSWORD:
+        if request.url.path.startswith("/api/"):
+            return Response(status_code=401, content="Unauthorized")
+        return RedirectResponse(url="/login")
+        
+    return await call_next(request)
+
+@app.get("/login", response_class=HTMLResponse)
+def login_page(error: int = 0):
+    error_msg = "<p style='color: #ef4444; margin-bottom: 1rem;'>Password errata.</p>" if error else ""
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Login - ListaDellaSpesa</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {{ font-family: sans-serif; background: #0f172a; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }}
+            .login-box {{ background: #1e293b; padding: 2.5rem; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; max-width: 320px; }}
+            input {{ padding: 0.75rem; border-radius: 6px; border: 1px solid #334155; background: #0f172a; color: white; margin-bottom: 1rem; width: 100%; box-sizing: border-box; font-size: 1rem; outline: none; }}
+            input:focus {{ border-color: #f59e0b; }}
+            button {{ background: #f59e0b; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1rem; transition: background 0.2s; }}
+            button:hover {{ background: #d97706; }}
+            h2 {{ margin-top: 0; margin-bottom: 1.5rem; }}
+        </style>
+    </head>
+    <body>
+        <div class="login-box">
+            <h2>Lista della Spesa 🍊</h2>
+            {error_msg}
+            <form method="POST" action="/login">
+                <input type="password" name="password" placeholder="Inserisci Password" required autofocus>
+                <button type="submit">Entra</button>
+            </form>
+        </div>
+    </body>
+    </html>
+    """
+
+@app.post("/login")
+async def do_login(password: str = Form(...)):
+    if password == PASSWORD:
+        response = RedirectResponse(url="/", status_code=303)
+        response.set_cookie(key=AUTH_COOKIE, value=password, max_age=31536000, httponly=True, samesite="Lax")
+        return response
+    else:
+        return RedirectResponse(url="/login?error=1", status_code=303)
 
 class GroceryItem(BaseModel):
     id: str

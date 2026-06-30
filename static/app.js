@@ -679,6 +679,7 @@ async function syncItemsRequest() {
         })
     });
     
+    if (res.status === 401) { window.location.href = '/login'; return; }
     if(!res.ok) throw new Error('Sync failed');
     const data = await res.json();
     
@@ -715,6 +716,7 @@ async function syncSettingsRequest() {
         })
     });
     
+    if (res.status === 401) { window.location.href = '/login'; return; }
     if(!res.ok) throw new Error('Settings sync failed');
     const data = await res.json();
     
