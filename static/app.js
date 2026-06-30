@@ -5,6 +5,7 @@ let isSyncing = false;
 let isOnline = navigator.onLine;
 let searchQuery = "";
 let currentTab = "shopping"; // "shopping" or "catalog"
+let optimizeRoute = false;
 
 // Default Configurations
 const DEFAULT_CATEGORIES = {
@@ -112,6 +113,10 @@ function loadLocalData() {
     }
     
     settingsLastSync = parseFloat(localStorage.getItem('settings_last_sync') || '0');
+    
+    // Route optimization state
+    optimizeRoute = localStorage.getItem('optimize_route') === 'true';
+    updateRouteToggleUI();
     
     // Active View State
     activeSupermarketId = localStorage.getItem('active_supermarket') || 'default';
@@ -234,9 +239,8 @@ function getOptimizedCategoryOrder(sup) {
         current = bestNext;
     }
     
-    // Append any unplaced categories at the end
-    const allCats = Object.keys(appSettings.categories);
-    const unplaced = allCats.filter(c => !orderedCats.includes(c));
+    // Append any unplaced categories at the end, maintaining the supermarket's custom order
+    const unplaced = sup.order.filter(c => !orderedCats.includes(c));
     
     return [...orderedCats, ...unplaced];
 }
@@ -283,7 +287,7 @@ function renderUI() {
     const activeSup = appSettings.supermarkets[activeSupermarketId];
     let order = activeSup ? activeSup.order : DEFAULT_ORDER;
     
-    if (currentTab === 'shopping' && activeSup && activeSup.graph) {
+    if (currentTab === 'shopping' && activeSup && activeSup.graph && optimizeRoute) {
         order = getOptimizedCategoryOrder(activeSup);
     } else {
         // Append any categories that exist but aren't in the supermarket's order array
@@ -741,6 +745,26 @@ window.addEventListener('online', () => { isOnline = true; offlineBanner.classLi
 window.addEventListener('offline', () => { isOnline = false; offlineBanner.classList.remove('hidden'); connectionBadge.className = 'badge offline'; connectionBadge.innerHTML = '<i class="fa-solid fa-wifi-slash"></i><span class="badge-text">Offline</span>'; });
 
 // Navigation
+const routeToggleBtn = document.getElementById('route-toggle-btn');
+routeToggleBtn.addEventListener('click', () => {
+    optimizeRoute = !optimizeRoute;
+    localStorage.setItem('optimize_route', optimizeRoute);
+    updateRouteToggleUI();
+    renderUI();
+});
+
+function updateRouteToggleUI() {
+    if (routeToggleBtn) {
+        if (optimizeRoute) {
+            routeToggleBtn.classList.add('active');
+            routeToggleBtn.style.color = 'var(--primary-color)';
+        } else {
+            routeToggleBtn.classList.remove('active');
+            routeToggleBtn.style.color = '';
+        }
+    }
+}
+
 document.getElementById('tab-shopping').addEventListener('click', (e) => { currentTab = 'shopping'; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); e.currentTarget.classList.add('active'); renderUI(); });
 document.getElementById('tab-catalog').addEventListener('click', (e) => { currentTab = 'catalog'; document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); e.currentTarget.classList.add('active'); renderUI(); });
 searchInput.addEventListener('input', (e) => { searchQuery = e.target.value.trim(); renderUI(); });
