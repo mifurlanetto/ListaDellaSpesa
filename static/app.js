@@ -828,6 +828,109 @@ quickAddBtn.addEventListener('click', handleSearchSubmit);
 document.getElementById('close-modal').addEventListener('click', () => { editModal.classList.add('hidden'); });
 document.getElementById('cancel-edit').addEventListener('click', () => { editModal.classList.add('hidden'); });
 
+// --- Mandarine Import Logic ---
+const mandarineImportForm = document.getElementById('mandarine-import-form');
+if (mandarineImportForm) {
+    mandarineImportForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const url = document.getElementById('mandarine-url').value.trim();
+        const db = document.getElementById('mandarine-db').value.trim();
+        const user = document.getElementById('mandarine-user').value.trim();
+        const pass = document.getElementById('mandarine-pass').value.trim();
+        const statusDiv = document.getElementById('mandarine-import-status');
+        const btn = document.getElementById('mandarine-import-btn');
+        
+        statusDiv.style.color = 'var(--text-main)';
+        statusDiv.textContent = 'Connessione a CouchDB in corso...';
+        btn.disabled = true;
+        
+        try {
+            const res = await fetch('/api/fetch_mandarine_db', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    couchdb_url: url,
+                    database_name: db,
+                    username: user,
+                    password: pass
+                })
+            });
+            
+            if (res.status === 401) { window.location.href = '/login'; return; }
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.detail || 'Errore di connessione');
+            }
+            
+            const data = await res.json();
+            const docs = (data.rows || []).map(r => r.doc).filter(d => d);
+            
+            const itemDocs = docs.filter(d => d.type === 'item');
+            
+            let importedCount = 0;
+            const now = Date.now();
+            
+            itemDocs.forEach(mItem => {
+                // Check if we already have it by name (case insensitive)
+                const existingIndex = items.findIndex(i => i.name.toLowerCase() === mItem.name.toLowerCase());
+                
+                // Check if it's "needed" in any mandarine list
+                let isNeeded = 0;
+                if (mItem.lists && Array.isArray(mItem.lists)) {
+                    // active and not completed
+                    const activeList = mItem.lists.find(l => l.active && !l.completed);
+                    if (activeList) isNeeded = 1;
+                }
+                
+                let qty = "";
+                if (mItem.lists && mItem.lists[0] && mItem.lists[0].quantity) {
+                    qty = mItem.lists[0].quantity.toString();
+                }
+                
+                if (existingIndex > -1) {
+                    // Update existing only if it becomes needed, else ignore
+                    if (isNeeded === 1 && items[existingIndex].needed === 0) {
+                        items[existingIndex].needed = 1;
+                        items[existingIndex].deleted = 0;
+                        items[existingIndex].quantity = qty || items[existingIndex].quantity;
+                        items[existingIndex].updated_at = now;
+                        importedCount++;
+                    }
+                } else {
+                    // Create new
+                    const newItem = {
+                        id: generateId(),
+                        name: mItem.name,
+                        quantity: qty,
+                        category: getAutoCategory(mItem.name),
+                        needed: isNeeded,
+                        deleted: 0,
+                        updated_at: now
+                    };
+                    items.push(newItem);
+                    importedCount++;
+                }
+            });
+            
+            saveItemsLocally();
+            renderUI();
+            if (isOnline) syncItems();
+            
+            statusDiv.style.color = '#10b981'; // Green
+            statusDiv.textContent = `Importazione completata! ${importedCount} articoli aggiunti o aggiornati.`;
+            mandarineImportForm.reset();
+            
+        } catch(e) {
+            console.error(e);
+            statusDiv.style.color = '#ef4444'; // Red
+            statusDiv.textContent = e.message;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
+
 // Boot
 init();
 updateSyncUI();

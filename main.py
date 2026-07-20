@@ -3,12 +3,14 @@
 #   "fastapi",
 #   "uvicorn",
 #   "python-multipart",
+#   "requests",
 # ]
 # ///
 
 import os
 import sqlite3
 import time
+import requests
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, Request, Response, Form
 from fastapi.staticfiles import StaticFiles
@@ -259,6 +261,22 @@ def sync_settings(payload: SyncSettingsRequest):
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         conn.close()
+
+class MandarineImportRequest(BaseModel):
+    couchdb_url: str
+    username: str
+    password: str
+    database_name: str
+
+@app.post("/api/fetch_mandarine_db")
+def fetch_mandarine_db(payload: MandarineImportRequest):
+    url = f"{payload.couchdb_url.rstrip('/')}/{payload.database_name}/_all_docs?include_docs=true"
+    try:
+        resp = requests.get(url, auth=(payload.username, payload.password), timeout=30)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Errore di connessione a CouchDB: {str(e)}")
 
 @app.get("/api/status")
 def status():

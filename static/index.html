@@ -141,6 +141,7 @@
             <div class="settings-tabs">
                 <button class="settings-tab-btn active" data-target="settings-supermarkets">Supermercati</button>
                 <button class="settings-tab-btn" data-target="settings-categories">Categorie</button>
+                <button class="settings-tab-btn" data-target="settings-mandarine">Importa Mandarine</button>
             </div>
             
             <!-- SUPERMARKETS PANE -->
@@ -175,6 +176,38 @@
                 </div>
                 
                 <div id="categories-list" class="settings-list"></div>
+            </div>
+            
+            <!-- MANDARINE IMPORT PANE -->
+            <div id="settings-mandarine" class="settings-pane hidden">
+                <div style="margin-bottom: 1rem;">
+                    <h3>Importa Database</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Inserisci le credenziali del database CouchDB usato da Mandarine per importare automaticamente i tuoi articoli (vengono ignorate le liste vuote).</p>
+                </div>
+                <form id="mandarine-import-form">
+                    <div class="input-group">
+                        <label for="mandarine-url">CouchDB URL</label>
+                        <input type="text" id="mandarine-url" placeholder="https://my-couchdb.com:5984" required autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="mandarine-db">Database Name</label>
+                        <input type="text" id="mandarine-db" placeholder="userdb-xxxxxx" required autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="mandarine-user">Username</label>
+                        <input type="text" id="mandarine-user" required autocomplete="off">
+                    </div>
+                    <div class="input-group">
+                        <label for="mandarine-pass">Password</label>
+                        <input type="password" id="mandarine-pass" required autocomplete="off">
+                    </div>
+                    <div class="modal-buttons" style="margin-top: 1.5rem; justify-content: center;">
+                        <button type="submit" id="mandarine-import-btn" class="btn-primary" style="width: 100%;">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> Importa Ora
+                        </button>
+                    </div>
+                    <div id="mandarine-import-status" style="margin-top: 1rem; font-size: 0.9rem; text-align: center; color: var(--primary-color);"></div>
+                </form>
             </div>
             
         </div>
