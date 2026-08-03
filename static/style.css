@@ -448,7 +448,7 @@ select option {
     border: 1px solid transparent;
     border-radius: var(--border-radius-sm);
     transition: var(--transition-fast);
-    animation: fadeIn var(--transition-normal);
+    animation: none;
 }
 
 .item-row:hover {
