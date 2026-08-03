@@ -2,6 +2,9 @@
 
 Una web application per la lista della spesa condivisa, progettata specificamente per essere semplice, leggera e resiliente alle interruzioni di connettività (**offline-first**). Ottimizzata per 2 o 3 utenti e pronta per essere esposta su internet in tutta sicurezza.
 
+Pesantemente ispirata da SpecificallyClementines [https://github.com/davideshay/groceries], ho optato per un approccio più leggero, eliminando il database "da produzione" in favore di uno più leggero, preservando comunque quanto scritto sopra.
+Inoltre, l'ho personalizzato di più sul mio caso d'uso.
+
 ## 🔄 Il Flusso di Lavoro (Workflow)
 
 L'applicazione è strutturata in due schede principali pensate per le diverse fasi della spesa:
@@ -43,6 +46,8 @@ L'applicazione è strutturata in due schede principali pensate per le diverse fa
 
 ## 🚀 Come Eseguire l'Applicazione
 
+### Esecuzione locale con `uv`
+
 Visto l'utilizzo di `uv` e dei metadati in linea dello script (PEP 723), non è necessario creare virtualenv o installare manualmente le dipendenze. È sufficiente un solo comando!
 
 1. Apri il terminale nella directory del progetto:
@@ -59,6 +64,33 @@ Visto l'utilizzo di `uv` e dei metadati in linea dello script (PEP 723), non è 
    [http://localhost:8000](http://localhost:8000)
 
 4. Inserisci la password per sbloccare l'applicazione e avviare la sincronizzazione.
+
+### Esecuzione con Docker
+
+Il progetto include anche un `Dockerfile` e un esempio di `docker-compose.yml` per avviare l'app in container.
+
+#### Opzione 1: usare l'immagine pubblica da GitHub Container Registry
+
+```bash
+docker pull ghcr.io/mifurlanetto/listadellaspesa:latest
+```
+
+#### Opzione 2: costruire localmente dal repository
+
+1. Costruisci e avvia il container:
+   ```bash
+   docker compose up --build
+   ```
+
+2. Apri il browser su:
+   [http://localhost:8000](http://localhost:8000)
+
+3. La configurazione usa un volume Docker chiamato `spesa_data` per mantenere i dati persistenti dell'applicazione tra riavvii del container.
+
+4. La password di accesso può essere impostata tramite la variabile d'ambiente `SPESA_PASS`:
+   ```bash
+   SPESA_PASS="LaTuaPasswordSegreta" docker compose up --build
+   ```
 
 ---
 
