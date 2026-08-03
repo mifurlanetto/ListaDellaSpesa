@@ -1,0 +1,15 @@
+services:
+  spesa:
+    build:
+      context: .
+    container_name: spesa
+    ports:
+      - "8000:8000"
+    environment:
+      SPESA_PASS: spesa123
+    volumes:
+      - spesa_data:/app
+    restart: unless-stopped
+
+volumes:
+  spesa_data:
