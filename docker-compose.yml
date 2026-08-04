@@ -8,7 +8,7 @@ services:
     environment:
       SPESA_PASS: spesa123
     volumes:
-      - spesa_data:/app
+      - spesa_data:/app/data
     restart: unless-stopped
 
 volumes:

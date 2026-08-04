@@ -18,7 +18,10 @@ from fastapi.responses import FileResponse, RedirectResponse, HTMLResponse
 from pydantic import BaseModel
 
 # Initialize database
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database.db")
+data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+DB_PATH = os.path.join(data_dir, "database.db")
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
