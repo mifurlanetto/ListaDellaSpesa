@@ -144,7 +144,7 @@ document.getElementById('add-stairs-btn').addEventListener('click', () => {
 
 document.getElementById('save-map-btn').addEventListener('click', () => {
     appSettings.supermarkets[currentMapSupId].graph = JSON.parse(JSON.stringify(mapData));
-    saveSettingsLocally(); // This triggers sync and re-renders UI
+    saveSettingsLocally(true, true, false); // This triggers sync and re-renders UI
     document.getElementById('store-map-modal').classList.add('hidden');
 });
 

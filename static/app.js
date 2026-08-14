@@ -33,6 +33,8 @@ let appSettings = {
     categories: JSON.parse(JSON.stringify(DEFAULT_CATEGORIES))
 };
 let settingsLastSync = 0;
+let supermarketsLastUpdated = 0;
+let categoriesLastUpdated = 0;
 let activeSupermarketId = "default";
 let tempCategoryOrder = [];
 let editingSupermarketId = null;
@@ -112,6 +114,8 @@ function loadLocalData() {
     }
     
     settingsLastSync = parseFloat(localStorage.getItem('settings_last_sync') || '0');
+    supermarketsLastUpdated = parseFloat(localStorage.getItem('supermarkets_updated_at') || '0');
+    categoriesLastUpdated = parseFloat(localStorage.getItem('categories_updated_at') || '0');
     
     // Active View State
     activeSupermarketId = localStorage.getItem('active_supermarket') || 'default';
@@ -124,7 +128,16 @@ function saveItemsLocally() {
     localStorage.setItem('groceries_items', JSON.stringify(items));
 }
 
-function saveSettingsLocally(triggerSync = true) {
+function saveSettingsLocally(triggerSync = true, updatedSupermarkets = true, updatedCategories = true) {
+    if (updatedSupermarkets) {
+        supermarketsLastUpdated = Date.now();
+        localStorage.setItem('supermarkets_updated_at', supermarketsLastUpdated.toString());
+    }
+    if (updatedCategories) {
+        categoriesLastUpdated = Date.now();
+        localStorage.setItem('categories_updated_at', categoriesLastUpdated.toString());
+    }
+    
     localStorage.setItem('app_supermarkets', JSON.stringify(appSettings.supermarkets));
     localStorage.setItem('app_categories', JSON.stringify(appSettings.categories));
     
@@ -528,7 +541,7 @@ document.getElementById('add-supermarket-btn').addEventListener('click', () => {
             name: name,
             order: Object.keys(appSettings.categories)
         };
-        saveSettingsLocally();
+        saveSettingsLocally(true, true, false);
         renderSettingsLists();
         input.value = '';
     }
@@ -590,7 +603,7 @@ editCategoryForm.addEventListener('submit', (e) => {
         const kwString = document.getElementById('edit-cat-keywords').value;
         appSettings.categories[id].keywords = kwString.split(',').map(s => s.trim().toLowerCase()).filter(s => s.length > 0);
         
-        saveSettingsLocally();
+        saveSettingsLocally(true, false, true);
         renderSettingsLists();
         editCategoryModal.classList.add('hidden');
     }
@@ -603,7 +616,7 @@ window.deleteSupermarket = function(id) {
             activeSupermarketId = Object.keys(appSettings.supermarkets)[0];
             localStorage.setItem('active_supermarket', activeSupermarketId);
         }
-        saveSettingsLocally();
+        saveSettingsLocally(true, true, false);
         renderSettingsLists();
         reorderSection.classList.add('hidden');
     }
@@ -669,7 +682,7 @@ window.moveCat = function(index, dir) {
 document.getElementById('save-reorder-btn').addEventListener('click', () => {
     if (editingSupermarketId && appSettings.supermarkets[editingSupermarketId]) {
         appSettings.supermarkets[editingSupermarketId].order = [...tempCategoryOrder];
-        saveSettingsLocally();
+        saveSettingsLocally(true, true, false);
         reorderSection.classList.add('hidden');
     }
 });
@@ -688,10 +701,11 @@ function syncAll(force = false) {
     updateSyncUI();
     
     Promise.all([syncSettingsRequest(), syncItemsRequest()])
-        .then(() => {
+        .then(([settingsStats, itemsStats]) => {
             isSyncing = false;
             updateSyncUI();
             renderUI();
+            processSyncStats(itemsStats, settingsStats);
         })
         .catch(err => {
             console.error('Sync Error:', err);
@@ -703,13 +717,56 @@ function syncAll(force = false) {
 function syncItems() {
     if(!isOnline) return;
     isSyncing = true; updateSyncUI();
-    syncItemsRequest().finally(() => { isSyncing = false; updateSyncUI(); renderUI(); });
+    syncItemsRequest().then(stats => {
+        processSyncStats(stats, null);
+    }).finally(() => { isSyncing = false; updateSyncUI(); renderUI(); });
 }
 
 function syncSettings() {
     if(!isOnline) return;
     isSyncing = true; updateSyncUI();
-    syncSettingsRequest().finally(() => { isSyncing = false; updateSyncUI(); renderUI(); populateSelects(); });
+    syncSettingsRequest().then(stats => {
+        processSyncStats(null, stats);
+    }).finally(() => { isSyncing = false; updateSyncUI(); renderUI(); populateSelects(); });
+}
+
+function processSyncStats(itemsStats, settingsStats) {
+    let msgs = [];
+    if (itemsStats) {
+        if (itemsStats.itemsAdded > 0) msgs.push(`+${itemsStats.itemsAdded} da prendere`);
+        if (itemsStats.itemsRemoved > 0) msgs.push(`-${itemsStats.itemsRemoved} rimosse`);
+    }
+    if (settingsStats && settingsStats.mapUpdates.length > 0) {
+        msgs.push(`Nuova mappa: ${settingsStats.mapUpdates.join(', ')}`);
+    }
+    if (msgs.length > 0) {
+        showToast(msgs.join(' | '));
+    }
+}
+
+function showToast(message) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'toast card';
+    toast.style.backgroundColor = 'var(--primary-color)';
+    toast.style.color = '#fff';
+    toast.style.padding = '1rem';
+    toast.style.borderRadius = '8px';
+    toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    toast.textContent = message;
+    
+    container.appendChild(toast);
+    
+    void toast.offsetWidth; // trigger reflow
+    toast.style.opacity = '1';
+    
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
 }
 
 async function syncItemsRequest() {
@@ -728,14 +785,23 @@ async function syncItemsRequest() {
     if(!res.ok) throw new Error('Sync failed');
     const data = await res.json();
     
+    let stats = { itemsAdded: 0, itemsRemoved: 0 };
+    
     // Merge updates
     data.updates.forEach(serverItem => {
         const localIndex = items.findIndex(i => i.id === serverItem.id);
         if (localIndex > -1) {
             if (serverItem.updated_at > items[localIndex].updated_at) {
+                const oldItem = items[localIndex];
+                const wasNeeded = oldItem.needed === 1 && oldItem.deleted === 0;
+                const isNeeded = serverItem.needed === 1 && serverItem.deleted === 0;
+                if (isNeeded && !wasNeeded) stats.itemsAdded++;
+                else if (!isNeeded && wasNeeded) stats.itemsRemoved++;
+                
                 items[localIndex] = serverItem;
             }
         } else {
+            if (serverItem.needed === 1 && serverItem.deleted === 0) stats.itemsAdded++;
             items.push(serverItem);
         }
     });
@@ -746,13 +812,18 @@ async function syncItemsRequest() {
     localStorage.setItem('groceries_last_sync', itemsLastSync.toString());
     saveItemsLocally();
     updateSyncUI();
+    
+    return stats;
 }
 
 async function syncSettingsRequest() {
-    const changes = [
-        { key: "supermarkets", value: JSON.stringify(appSettings.supermarkets), updated_at: Date.now() },
-        { key: "categories", value: JSON.stringify(appSettings.categories), updated_at: Date.now() }
-    ];
+    const changes = [];
+    if (supermarketsLastUpdated > settingsLastSync) {
+        changes.push({ key: "supermarkets", value: JSON.stringify(appSettings.supermarkets), updated_at: supermarketsLastUpdated });
+    }
+    if (categoriesLastUpdated > settingsLastSync) {
+        changes.push({ key: "categories", value: JSON.stringify(appSettings.categories), updated_at: categoriesLastUpdated });
+    }
     
     const res = await fetch('/api/sync_settings', {
         method: 'POST',
@@ -767,16 +838,36 @@ async function syncSettingsRequest() {
     if(!res.ok) throw new Error('Settings sync failed');
     const data = await res.json();
     
+    let stats = { mapUpdates: [] };
+    
     data.updates.forEach(update => {
-        if (update.key === 'supermarkets') appSettings.supermarkets = JSON.parse(update.value);
-        if (update.key === 'categories') appSettings.categories = JSON.parse(update.value);
+        if (update.key === 'supermarkets') {
+            const newSupermarkets = JSON.parse(update.value);
+            for (const id in newSupermarkets) {
+                const isNewMap = !appSettings.supermarkets[id] && newSupermarkets[id].graph;
+                const isUpdatedMap = appSettings.supermarkets[id] && JSON.stringify(appSettings.supermarkets[id].graph) !== JSON.stringify(newSupermarkets[id].graph);
+                if (isNewMap || isUpdatedMap) {
+                    stats.mapUpdates.push(newSupermarkets[id].name);
+                }
+            }
+            appSettings.supermarkets = newSupermarkets;
+            supermarketsLastUpdated = update.updated_at;
+            localStorage.setItem('supermarkets_updated_at', supermarketsLastUpdated.toString());
+        }
+        if (update.key === 'categories') {
+            appSettings.categories = JSON.parse(update.value);
+            categoriesLastUpdated = update.updated_at;
+            localStorage.setItem('categories_updated_at', categoriesLastUpdated.toString());
+        }
     });
     
     settingsLastSync = data.server_time;
     lastSyncTime = Date.now();
     localStorage.setItem('settings_last_sync', settingsLastSync.toString());
-    saveSettingsLocally(false); // don't trigger sync loop
+    saveSettingsLocally(false, false, false); // don't trigger sync loop and don't update timestamps
     updateSyncUI();
+    
+    return stats;
 }
 
 function updateSyncUI() {
