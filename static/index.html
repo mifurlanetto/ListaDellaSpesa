@@ -25,6 +25,9 @@
                 </div>
             </div>
             <div class="header-right">
+                <button id="settings-button" class="btn-secondary" title="Impostazioni">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
                 <div id="connection-badge" class="badge online">
                     <i class="fa-solid fa-wifi"></i>
                     <span class="badge-text">Online</span>
@@ -59,6 +62,15 @@
 
         <!-- Actions Bar (Search, Supermarket Selector, Settings, Sync) -->
         <div class="actions-bar">
+            <div class="actions-controls">
+                <div id="supermarket-selector-container" class="supermarket-selector-container">
+                    <i class="fa-solid fa-shop supermarket-icon"></i>
+                    <select id="active-supermarket-select" title="Seleziona Supermercato">
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            
             <div class="search-bar" style="display: flex; align-items: center; width: 100%;">
                 <i class="fa-solid fa-magnifying-glass search-icon"></i>
                 <input type="text" id="search-input" placeholder="Cerca o aggiungi articolo..." autocomplete="off" style="flex: 1;">
@@ -66,17 +78,6 @@
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
-            
-            <div id="supermarket-selector-container" class="supermarket-selector-container">
-                <i class="fa-solid fa-shop supermarket-icon"></i>
-                <select id="active-supermarket-select" title="Seleziona Supermercato">
-                    <!-- Populated dynamically -->
-                </select>
-            </div>
-
-            <button id="settings-button" class="btn-secondary" title="Impostazioni">
-                <i class="fa-solid fa-gear"></i>
-            </button>
         </div>
 
         <!-- Grocery List Grid -->

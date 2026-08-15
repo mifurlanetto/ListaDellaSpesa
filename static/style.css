@@ -90,6 +90,7 @@ body {
 .header-right {
     display: flex;
     gap: 0.75rem;
+    align-items: center;
 }
 
 /* Badges */
@@ -327,10 +328,19 @@ select option {
     flex-wrap: wrap;
 }
 
+.actions-controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    flex: 1;
+    order: 2;
+}
+
 .search-bar {
     flex: 1;
     position: relative;
     min-width: 150px;
+    order: 1;
 }
 
 .search-bar input {
@@ -766,16 +776,31 @@ select option {
     }
     
     /* Actions/Controls Bar adjustments */
+    /* Actions/Controls Bar adjustments */
     .actions-bar {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 0.75rem;
+        display: contents;
     }
     
     .search-bar {
-        width: 100% !important; /* Force search to take full width */
-        flex: 1 1 100%;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background-color: rgba(15, 23, 42, 0.95);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        padding: 0.75rem 0.5rem;
+        margin: 0 -0.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        width: auto !important; /* Let negative margins work in flex column */
+        align-self: stretch;
+        order: 0;
+    }
+    
+    .actions-controls {
+        width: 100%;
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+        order: 0;
     }
     
     .supermarket-selector-container {
