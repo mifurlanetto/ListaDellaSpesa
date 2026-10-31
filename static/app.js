@@ -74,6 +74,9 @@ const reorderList = document.getElementById('reorder-list');
 const editCategoryModal = document.getElementById('edit-category-modal');
 const editCategoryForm = document.getElementById('edit-category-form');
 
+// Scroll To Top
+const scrollToTopBtn = document.getElementById('scroll-to-top');
+
 
 // --- Initialization ---
 function init() {
@@ -340,6 +343,8 @@ function renderUI() {
         `;
         listViewContainer.appendChild(card);
     });
+
+    updateScrollToTopVisibility();
 }
 
 
@@ -918,6 +923,27 @@ searchInput.addEventListener('keydown', (e) => {
 quickAddBtn.addEventListener('click', handleSearchSubmit);
 document.getElementById('close-modal').addEventListener('click', () => { editModal.classList.add('hidden'); });
 document.getElementById('cancel-edit').addEventListener('click', () => { editModal.classList.add('hidden'); });
+
+// --- Scroll to Top Button ---
+function updateScrollToTopVisibility() {
+    if (!scrollToTopBtn) return;
+    if (window.scrollY > 250) {
+        scrollToTopBtn.classList.add('visible');
+    } else {
+        scrollToTopBtn.classList.remove('visible');
+    }
+}
+
+window.addEventListener('scroll', updateScrollToTopVisibility, { passive: true });
+
+if (scrollToTopBtn) {
+    scrollToTopBtn.addEventListener('click', () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+}
 
 // --- Mandarine Import Logic ---
 const mandarineImportForm = document.getElementById('mandarine-import-form');
