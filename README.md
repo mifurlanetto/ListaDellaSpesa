@@ -32,6 +32,10 @@ L'applicazione è strutturata in due schede principali pensate per le diverse fa
   - Se l'articolo cercato esiste, premendo Invio (o cliccando `+`) viene aggiunto subito alla lista. Se non esiste, viene creato implicitamente all'istante con auto-categorizzazione intelligente tramite Smartwords, senza fastidiosi popup di conferma.
 - **Stato Sync Cliccabile**: Il badge di stato "Sincronizzato" mostra da quanti secondi/minuti è avvenuto l'ultimo allineamento (es. `Sincronizzato (10s fa)`) e può essere cliccato per forzare manualmente una sincronizzazione immediata.
 - **Categorie e Smartwords Personalizzabili**: Ciascuna categoria supporta un elenco di "Smartwords" (parole chiave) personalizzabili: digitando un nuovo prodotto, l'app lo assegnerà in automatico alla categoria corretta.
+- **Link ai Prodotti & Spesa Online (es. Visotto)**:
+  - Ciascun articolo nel database supporta un link diretto al prodotto (es. scheda prodotto su `spesaonline.supermercativisotto.it` o altri e-commerce).
+  - Pulsante dedicato su ogni riga articolo per aprire la scheda del prodotto in una nuova scheda del browser.
+  - Funzione **"Compila Carrello Online"**: un assistente dedicato nella scheda "Da Comprare" con il riepilogo degli articoli necessari, indicazione di quali hanno un link configurato e pulsante "Apri tutti i link" per compilare la spesa online in pochissimi click.
 - **Risoluzione dei Conflitti Semplice**: Utilizza un meccanismo di sincronizzazione basato su timestamps con logica *Last-Write-Wins* (L'ultima scrittura vince).
 
 ---
@@ -154,19 +158,20 @@ Aggiunge un prodotto alla lista della spesa o riattiva un prodotto già presente
   "quantity": "2 bottiglie",
   "category": "Latticini",
   "needed": 1,
+  "link": "https://spesaonline.supermercativisotto.it/...",
   "confirm": false
 }
 ```
 *Tutti i campi ad eccezione di `name` sono opzionali.*
 
 **Comportamento e Gestione Conferma:**
-- **Se l'articolo esiste già nel catalogo**: viene immediatamente impostato come da comprare (`needed = 1`) senza chiedere conferma, aggiornando la quantità se fornita. Risponde con:
+- **Se l'articolo esiste già nel catalogo**: viene immediatamente impostato come da comprare (`needed = 1`) senza chiedere conferma, aggiornando quantità e link se forniti. Risponde con:
   ```json
   {
     "status": "ok",
     "action": "added",
     "message": "'Latte' aggiunto alla lista della spesa",
-    "item": { "id": "...", "name": "Latte", "quantity": "2 bottiglie", "category": "Latticini", "needed": 1 }
+    "item": { "id": "...", "name": "Latte", "quantity": "2 bottiglie", "category": "Latticini", "needed": 1, "link": "https://spesaonline.supermercativisotto.it/..." }
   }
   ```
 - **Se l'articolo NON esiste e `confirm` è `false` (default)**: l'articolo **non** viene creato a sistema e l'API risponde richiedendo conferma:
@@ -199,8 +204,8 @@ Restituisce l'elenco degli articoli presenti nella lista della spesa.
 {
   "count": 2,
   "items": [
-    { "id": "abc123", "name": "Latte", "quantity": "2 bottiglie", "category": "Latticini", "needed": 1 },
-    { "id": "def456", "name": "Mele", "quantity": "1 kg", "category": "Ortofrutta", "needed": 1 }
+    { "id": "abc123", "name": "Latte", "quantity": "2 bottiglie", "category": "Latticini", "needed": 1, "link": "https://spesaonline.supermercativisotto.it/..." },
+    { "id": "def456", "name": "Mele", "quantity": "1 kg", "category": "Ortofrutta", "needed": 1, "link": "" }
   ]
 }
 ```

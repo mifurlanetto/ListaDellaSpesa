@@ -45,11 +45,18 @@ def init_db():
             category TEXT,
             needed INTEGER DEFAULT 0,
             deleted INTEGER DEFAULT 0,
-            updated_at REAL NOT NULL
+            updated_at REAL NOT NULL,
+            link TEXT DEFAULT ''
         )
     """)
     # Add index on updated_at for fast sync querying
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_grocery_updated_at ON grocery_items(updated_at)")
+    
+    # Migration: ensure 'link' column exists if upgrading an existing database
+    cursor.execute("PRAGMA table_info(grocery_items)")
+    existing_cols = [row[1] for row in cursor.fetchall()]
+    if "link" not in existing_cols:
+        cursor.execute("ALTER TABLE grocery_items ADD COLUMN link TEXT DEFAULT ''")
     
     # Table for app settings (categories, supermarkets)
     cursor.execute("""
@@ -158,6 +165,7 @@ class GroceryItem(BaseModel):
     needed: int
     deleted: int
     updated_at: float
+    link: Optional[str] = ""
 
 class SyncRequest(BaseModel):
     client_last_sync: float
@@ -181,27 +189,28 @@ def sync_groceries(payload: SyncRequest):
             cursor.execute("SELECT updated_at FROM grocery_items WHERE id = ?", (item.id,))
             row = cursor.fetchone()
             
+            item_link = item.link or ""
             if row is None:
                 # Insert new item
                 cursor.execute("""
-                    INSERT INTO grocery_items (id, name, quantity, category, needed, deleted, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (item.id, item.name, item.quantity, item.category, item.needed, item.deleted, item.updated_at))
+                    INSERT INTO grocery_items (id, name, quantity, category, needed, deleted, updated_at, link)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (item.id, item.name, item.quantity, item.category, item.needed, item.deleted, item.updated_at, item_link))
             else:
                 db_updated_at = row["updated_at"]
                 # If client's update is newer, overwrite database
                 if item.updated_at > db_updated_at:
                     cursor.execute("""
                         UPDATE grocery_items
-                        SET name = ?, quantity = ?, category = ?, needed = ?, deleted = ?, updated_at = ?
+                        SET name = ?, quantity = ?, category = ?, needed = ?, deleted = ?, updated_at = ?, link = ?
                         WHERE id = ?
-                    """, (item.name, item.quantity, item.category, item.needed, item.deleted, item.updated_at, item.id))
+                    """, (item.name, item.quantity, item.category, item.needed, item.deleted, item.updated_at, item_link, item.id))
         
         conn.commit()
         
         # 2. Get updates from server since client's last sync time
         cursor.execute("""
-            SELECT id, name, quantity, category, needed, deleted, updated_at 
+            SELECT id, name, quantity, category, needed, deleted, updated_at, link 
             FROM grocery_items 
             WHERE updated_at > ?
         """, (payload.client_last_sync,))
@@ -215,7 +224,8 @@ def sync_groceries(payload: SyncRequest):
                 category=row["category"],
                 needed=row["needed"],
                 deleted=row["deleted"],
-                updated_at=row["updated_at"]
+                updated_at=row["updated_at"],
+                link=row["link"] or ""
             ))
             
         return SyncResponse(server_time=server_time, updates=updates)
@@ -375,6 +385,7 @@ class HAAddItemRequest(BaseModel):
     category: Optional[str] = None
     needed: Optional[int] = 1
     confirm: Optional[bool] = False
+    link: Optional[str] = None
 
 @app.post("/api/ha/items")
 @app.post("/api/ha/add")
@@ -390,7 +401,7 @@ def ha_add_item(payload: HAAddItemRequest):
     
     try:
         # Check if item exists in catalog (case-insensitive)
-        cursor.execute("SELECT id, name, quantity, category, needed, deleted FROM grocery_items WHERE LOWER(name) = LOWER(?)", (item_name,))
+        cursor.execute("SELECT id, name, quantity, category, needed, deleted, link FROM grocery_items WHERE LOWER(name) = LOWER(?)", (item_name,))
         row = cursor.fetchone()
         
         if row is not None:
@@ -398,13 +409,14 @@ def ha_add_item(payload: HAAddItemRequest):
             item_id = row["id"]
             new_qty = payload.quantity.strip() if payload.quantity and payload.quantity.strip() else (row["quantity"] or "")
             new_cat = payload.category.strip() if payload.category and payload.category.strip() else (row["category"] or "Uncategorized")
+            new_link = payload.link.strip() if payload.link is not None else (row["link"] or "")
             needed_val = payload.needed if payload.needed is not None else 1
             
             cursor.execute("""
                 UPDATE grocery_items
-                SET name = ?, quantity = ?, category = ?, needed = ?, deleted = 0, updated_at = ?
+                SET name = ?, quantity = ?, category = ?, needed = ?, deleted = 0, updated_at = ?, link = ?
                 WHERE id = ?
-            """, (row["name"], new_qty, new_cat, needed_val, now_ms, item_id))
+            """, (row["name"], new_qty, new_cat, needed_val, now_ms, new_link, item_id))
             conn.commit()
             
             return {
@@ -418,7 +430,8 @@ def ha_add_item(payload: HAAddItemRequest):
                     "category": new_cat,
                     "needed": needed_val,
                     "deleted": 0,
-                    "updated_at": now_ms
+                    "updated_at": now_ms,
+                    "link": new_link
                 }
             }
         else:
@@ -435,12 +448,13 @@ def ha_add_item(payload: HAAddItemRequest):
             new_id = uuid.uuid4().hex[:10]
             qty = payload.quantity.strip() if payload.quantity else ""
             cat = payload.category.strip() if payload.category and payload.category.strip() else predict_category(item_name, cursor)
+            link_val = payload.link.strip() if payload.link else ""
             needed_val = payload.needed if payload.needed is not None else 1
             
             cursor.execute("""
-                INSERT INTO grocery_items (id, name, quantity, category, needed, deleted, updated_at)
-                VALUES (?, ?, ?, ?, ?, 0, ?)
-            """, (new_id, item_name, qty, cat, needed_val, now_ms))
+                INSERT INTO grocery_items (id, name, quantity, category, needed, deleted, updated_at, link)
+                VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+            """, (new_id, item_name, qty, cat, needed_val, now_ms, link_val))
             conn.commit()
             
             return {
@@ -454,7 +468,8 @@ def ha_add_item(payload: HAAddItemRequest):
                     "category": cat,
                     "needed": needed_val,
                     "deleted": 0,
-                    "updated_at": now_ms
+                    "updated_at": now_ms,
+                    "link": link_val
                 }
             }
     except HTTPException:
@@ -472,9 +487,9 @@ def ha_get_items(needed_only: bool = True):
     cursor = conn.cursor()
     try:
         if needed_only:
-            cursor.execute("SELECT id, name, quantity, category, needed, updated_at FROM grocery_items WHERE deleted = 0 AND needed = 1 ORDER BY category, name")
+            cursor.execute("SELECT id, name, quantity, category, needed, updated_at, link FROM grocery_items WHERE deleted = 0 AND needed = 1 ORDER BY category, name")
         else:
-            cursor.execute("SELECT id, name, quantity, category, needed, updated_at FROM grocery_items WHERE deleted = 0 ORDER BY category, name")
+            cursor.execute("SELECT id, name, quantity, category, needed, updated_at, link FROM grocery_items WHERE deleted = 0 ORDER BY category, name")
             
         rows = cursor.fetchall()
         items_list = [
@@ -484,7 +499,8 @@ def ha_get_items(needed_only: bool = True):
                 "quantity": r["quantity"] or "",
                 "category": r["category"] or "Uncategorized",
                 "needed": r["needed"],
-                "updated_at": r["updated_at"]
+                "updated_at": r["updated_at"],
+                "link": r["link"] or ""
             }
             for r in rows
         ]

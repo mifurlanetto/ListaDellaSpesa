@@ -87,11 +87,34 @@ function init() {
     }
 }
 
+// --- Security & Formatting Helpers ---
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function sanitizeUrl(url) {
+    if (!url) return '';
+    const trimmed = String(url).trim();
+    if (/^https?:\/\//i.test(trimmed)) {
+        return trimmed;
+    }
+    if (/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/i.test(trimmed)) {
+        return 'https://' + trimmed;
+    }
+    return '';
+}
+
 // --- Data Management (Local Storage) ---
 function loadLocalData() {
     // Items
     const savedItems = localStorage.getItem('groceries_items');
-    items = savedItems ? JSON.parse(savedItems) : [];
+    items = savedItems ? JSON.parse(savedItems).map(i => ({ link: "", ...i })) : [];
     itemsLastSync = parseFloat(localStorage.getItem('groceries_last_sync') || '0');
     lastSyncTime = parseFloat(localStorage.getItem('groceries_last_sync') || Date.now().toString());
     
@@ -248,9 +271,13 @@ function getOptimizedCategoryOrder(sup) {
 }
 
 function renderUI() {
-    // Show/Hide Supermarket Selector based on current tab
+    // Show/Hide Supermarket Selector and Online Cart button based on current tab
     if (supermarketSelectorContainer) {
         supermarketSelectorContainer.style.display = currentTab === 'shopping' ? 'flex' : 'none';
+    }
+    const onlineCartBtn = document.getElementById('online-cart-btn');
+    if (onlineCartBtn) {
+        onlineCartBtn.style.display = currentTab === 'shopping' ? 'inline-flex' : 'none';
     }
 
     // Determine which items to show
@@ -319,23 +346,31 @@ function renderUI() {
                 <span class="category-card-count">${catItems.length}</span>
             </div>
             <div class="category-items-list">
-                ${catItems.map(item => `
+                ${catItems.map(item => {
+                    const itemLink = item.link ? sanitizeUrl(item.link) : '';
+                    return `
                     <div class="item-row ${item.needed ? 'needed' : 'not-needed'}" data-id="${item.id}">
                         <div class="item-left" onclick="toggleItemNeeded('${item.id}')">
                             <div class="checkbox-custom">
                                 <i class="fa-solid fa-check"></i>
                             </div>
                             <div class="item-details">
-                                <span class="item-name">${item.name}</span>
-                                ${item.quantity ? `<span class="qty-pill">${item.quantity}</span>` : ''}
+                                <span class="item-name">${escapeHtml(item.name)}</span>
+                                ${item.quantity ? `<span class="qty-pill">${escapeHtml(item.quantity)}</span>` : ''}
                             </div>
                         </div>
                         <div class="item-actions">
-                            <button class="btn-edit" onclick="openEditModal('${item.id}')"><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn-delete" onclick="deleteItem('${item.id}')"><i class="fa-solid fa-trash"></i></button>
+                            ${itemLink ? `
+                                <a href="${escapeHtml(itemLink)}" target="_blank" rel="noopener noreferrer" class="btn-link" title="Apri su Spesa Online" onclick="event.stopPropagation()">
+                                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                                </a>
+                            ` : ''}
+                            <button class="btn-edit" onclick="openEditModal('${item.id}')" title="Modifica"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn-delete" onclick="deleteItem('${item.id}')" title="Elimina"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </div>
-                `).join('')}
+                    `;
+                }).join('')}
             </div>
         `;
         listViewContainer.appendChild(card);
@@ -384,7 +419,8 @@ function handleSearchSubmit() {
             category: getAutoCategory(query),
             needed: 1, // Added from quick bar means we want it
             deleted: 0,
-            updated_at: Date.now()
+            updated_at: Date.now(),
+            link: ""
         };
         items.push(newItem);
     }
@@ -402,6 +438,8 @@ editItemForm.addEventListener('submit', (e) => {
     const name = document.getElementById('edit-item-name').value.trim();
     const qty = document.getElementById('edit-item-qty').value.trim();
     const category = document.getElementById('edit-item-category').value;
+    const linkInput = document.getElementById('edit-item-link');
+    const link = linkInput ? sanitizeUrl(linkInput.value.trim()) : "";
     
     if (id) {
         // Editing existing item
@@ -410,6 +448,7 @@ editItemForm.addEventListener('submit', (e) => {
             item.name = name;
             item.quantity = qty;
             item.category = category;
+            item.link = link;
             item.updated_at = Date.now();
         }
     } else {
@@ -419,6 +458,7 @@ editItemForm.addEventListener('submit', (e) => {
             name: name,
             quantity: qty,
             category: category,
+            link: link,
             needed: 1,
             deleted: 0,
             updated_at: Date.now()
@@ -469,12 +509,44 @@ window.openEditModal = function(id) {
     if (item) {
         document.getElementById('edit-item-id').value = item.id;
         document.getElementById('edit-item-name').value = item.name;
-        document.getElementById('edit-item-qty').value = item.quantity;
+        document.getElementById('edit-item-qty').value = item.quantity || '';
         document.getElementById('edit-item-category').value = item.category;
+        
+        const linkInput = document.getElementById('edit-item-link');
+        const testBtn = document.getElementById('btn-test-link');
+        const itemLink = item.link || '';
+        if (linkInput) {
+            linkInput.value = itemLink;
+        }
+        if (testBtn) {
+            const valid = sanitizeUrl(itemLink);
+            if (valid) {
+                testBtn.href = valid;
+                testBtn.style.display = 'inline-flex';
+            } else {
+                testBtn.style.display = 'none';
+            }
+        }
+        
         document.getElementById('edit-modal-title').textContent = "Modifica Articolo";
         editModal.classList.remove('hidden');
     }
 };
+
+// Wire up dynamic preview for test link in edit modal
+const editItemLinkInput = document.getElementById('edit-item-link');
+const editItemTestLinkBtn = document.getElementById('btn-test-link');
+if (editItemLinkInput && editItemTestLinkBtn) {
+    editItemLinkInput.addEventListener('input', () => {
+        const val = sanitizeUrl(editItemLinkInput.value.trim());
+        if (val) {
+            editItemTestLinkBtn.href = val;
+            editItemTestLinkBtn.style.display = 'inline-flex';
+        } else {
+            editItemTestLinkBtn.style.display = 'none';
+        }
+    });
+}
 
 
 // --- Settings Dashboard Operations ---
@@ -997,7 +1069,8 @@ if (mandarineImportForm) {
                         category: getAutoCategory(mItem.name),
                         needed: isNeeded,
                         deleted: 0,
-                        updated_at: now
+                        updated_at: now,
+                        link: mItem.link || ""
                     };
                     items.push(newItem);
                     importedCount++;
@@ -1019,6 +1092,108 @@ if (mandarineImportForm) {
         } finally {
             btn.disabled = false;
         }
+    });
+}
+
+// --- Online Cart (Spesa Online) Logic ---
+const onlineCartModal = document.getElementById('online-cart-modal');
+const onlineCartBtn = document.getElementById('online-cart-btn');
+const closeOnlineCartModal = document.getElementById('close-online-cart-modal');
+const closeOnlineCartBtn = document.getElementById('close-online-cart-btn');
+const btnOpenAllLinks = document.getElementById('btn-open-all-links');
+const onlineCartStats = document.getElementById('online-cart-stats');
+const onlineCartItemsList = document.getElementById('online-cart-items-list');
+
+function openOnlineCartModal() {
+    renderOnlineCartModal();
+    if (onlineCartModal) onlineCartModal.classList.remove('hidden');
+}
+
+function renderOnlineCartModal() {
+    if (!onlineCartItemsList) return;
+    
+    const neededItems = items.filter(i => !i.deleted && i.needed === 1);
+    const withLinks = neededItems.filter(i => i.link && i.link.trim().length > 0);
+    
+    if (onlineCartStats) {
+        onlineCartStats.innerHTML = `<strong>${withLinks.length}</strong> su <strong>${neededItems.length}</strong> articoli hanno un link`;
+    }
+    
+    if (btnOpenAllLinks) {
+        btnOpenAllLinks.disabled = withLinks.length === 0;
+        btnOpenAllLinks.style.opacity = withLinks.length === 0 ? '0.5' : '1';
+    }
+    
+    if (neededItems.length === 0) {
+        onlineCartItemsList.innerHTML = `
+            <div class="empty-state" style="padding: 2rem 1rem;">
+                <div class="empty-icon">🛒</div>
+                <h3>La lista della spesa è vuota</h3>
+                <p>Seleziona gli articoli nel "Catalogo Articoli" prima di compilare il carrello online.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    onlineCartItemsList.innerHTML = neededItems.map(item => {
+        const catMeta = appSettings.categories[item.category] || { icon: "❓", label: item.category };
+        const hasLink = item.link && item.link.trim().length > 0;
+        const validUrl = hasLink ? sanitizeUrl(item.link) : '';
+        
+        return `
+            <div class="online-cart-row ${hasLink ? 'has-link' : ''}">
+                <div class="online-cart-info">
+                    <span class="online-cart-icon">${catMeta.icon}</span>
+                    <div class="online-cart-text">
+                        <span class="online-cart-name">${escapeHtml(item.name)}</span>
+                        ${item.quantity ? `<span class="qty-pill" style="align-self: flex-start;">${escapeHtml(item.quantity)}</span>` : ''}
+                    </div>
+                </div>
+                <div class="online-cart-item-actions">
+                    ${hasLink ? `
+                        <a href="${escapeHtml(validUrl)}" target="_blank" rel="noopener noreferrer" class="btn-primary online-cart-link-btn" title="Apri prodotto su Spesa Online">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i> Apri
+                        </a>
+                    ` : `
+                        <button class="btn-secondary btn-sm" onclick="openEditModal('${item.id}'); if(onlineCartModal) onlineCartModal.classList.add('hidden');" title="Aggiungi link a questo articolo" style="padding: 0.4rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                            <i class="fa-solid fa-link"></i> + Link
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+if (onlineCartBtn) {
+    onlineCartBtn.addEventListener('click', openOnlineCartModal);
+}
+if (closeOnlineCartModal) {
+    closeOnlineCartModal.addEventListener('click', () => {
+        if (onlineCartModal) onlineCartModal.classList.add('hidden');
+    });
+}
+if (closeOnlineCartBtn) {
+    closeOnlineCartBtn.addEventListener('click', () => {
+        if (onlineCartModal) onlineCartModal.classList.add('hidden');
+    });
+}
+if (btnOpenAllLinks) {
+    btnOpenAllLinks.addEventListener('click', () => {
+        const neededItems = items.filter(i => !i.deleted && i.needed === 1);
+        const linksToOpen = neededItems.map(i => sanitizeUrl(i.link)).filter(l => l.length > 0);
+        
+        if (linksToOpen.length === 0) {
+            showToast("Nessun articolo ha un link configurato.");
+            return;
+        }
+        
+        showToast(`Apertura di ${linksToOpen.length} schede prodotto...`);
+        linksToOpen.forEach((url, idx) => {
+            setTimeout(() => {
+                window.open(url, '_blank');
+            }, idx * 250);
+        });
     });
 }
 

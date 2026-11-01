@@ -69,6 +69,10 @@
                         <!-- Populated dynamically -->
                     </select>
                 </div>
+                <button id="online-cart-btn" class="btn-secondary" title="Compila carrello su Spesa Online">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span>Spesa Online</span>
+                </button>
             </div>
             
             <div class="search-bar" style="display: flex; align-items: center; width: 100%;">
@@ -123,11 +127,52 @@
                         <!-- Populated dynamically -->
                     </select>
                 </div>
+                <div class="input-group">
+                    <label for="edit-item-link">Link Spesa Online (es. Visotto)</label>
+                    <div class="link-input-wrapper">
+                        <input type="url" id="edit-item-link" placeholder="https://spesaonline.supermercativisotto.it/..." autocomplete="off">
+                        <a id="btn-test-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-secondary link-test-btn" title="Apri link">
+                            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </div>
+                </div>
                 <div class="modal-buttons">
                     <button type="button" id="cancel-edit" class="btn-secondary">Annulla</button>
                     <button type="submit" class="btn-primary">Salva</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Online Cart Modal -->
+    <div id="online-cart-modal" class="modal hidden">
+        <div class="modal-content card online-cart-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <h2><i class="fa-solid fa-cart-shopping" style="color: var(--primary);"></i> Compila Carrello Online</h2>
+                    <p class="modal-subtitle">
+                        Apri i link dei prodotti per aggiungerli al carrello su <a href="https://spesaonline.supermercativisotto.it" target="_blank" rel="noopener noreferrer">spesaonline.supermercativisotto.it</a>
+                    </p>
+                </div>
+                <button id="close-online-cart-modal" class="btn-icon"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <div class="online-cart-toolbar">
+                <div id="online-cart-stats" class="online-cart-stats">0 articoli da comprare</div>
+                <div class="online-cart-actions">
+                    <button id="btn-open-all-links" class="btn-primary btn-sm" title="Apri tutti i link disponibili in nuove schede">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i> Apri tutti i link
+                    </button>
+                </div>
+            </div>
+
+            <div id="online-cart-items-list" class="online-cart-items-list">
+                <!-- Populated dynamically -->
+            </div>
+            
+            <div class="modal-buttons" style="margin-top: 1rem;">
+                <button type="button" id="close-online-cart-btn" class="btn-secondary" style="width: 100%;">Chiudi</button>
+            </div>
         </div>
     </div>
 
