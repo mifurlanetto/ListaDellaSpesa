@@ -1031,3 +1031,73 @@ select option {
         flex: 0 0 auto;
     }
 }
+
+
+/* Toast Container */
+#toast-container {
+    position: fixed;
+    bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+    max-width: calc(100vw - 40px);
+}
+
+@media (min-width: 900px) {
+    #toast-container {
+        right: calc(50% - 400px + 20px);
+    }
+}
+
+/* Scroll to Top (Back to Top FAB - Proposal A: Orange Glow) */
+.scroll-to-top {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    right: 20px;
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, var(--primary) 0%, #ea580c 100%);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 4px 16px rgba(249, 115, 22, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    cursor: pointer;
+    z-index: 900;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(14px) scale(0.9);
+    transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                visibility 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s ease,
+                background 0.2s ease;
+}
+
+.scroll-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.scroll-to-top:hover {
+    transform: translateY(-2px) scale(1.06);
+    box-shadow: 0 6px 22px rgba(249, 115, 22, 0.6);
+}
+
+.scroll-to-top:active {
+    transform: translateY(0) scale(0.94);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.4);
+}
+
+@media (min-width: 900px) {
+    .scroll-to-top {
+        right: calc(50% - 400px + 20px);
+    }
+}
